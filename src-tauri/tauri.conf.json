@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "identifier": "com.ganquan.excel-export-tool",
   "build": {
-    "frontendDist": "../",
+    "frontendDist": "../web",
     "devUrl": "http://localhost:1420"
   },
   "app": {
