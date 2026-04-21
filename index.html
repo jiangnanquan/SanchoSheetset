@@ -133,13 +133,7 @@ var rules = [];
 var ruleSeq = 0;
 var jsonAvailable = false; // 是否成功从 JSON 文件加载过
 
-var HARDCODED_DEFAULTS = [
-  { sheets: ['经营公司', '其他公司', '全部公司'], tpl: '{date}_{A1:全部公司}', desc: '日报合并' },
-  { sheets: ['用途统计表-三生主业及零售板块'], tpl: '{date}_{sheet}', desc: '用途统计-三生' },
-  { sheets: ['用途统计表-希诺赛板块'], tpl: '{date}_{sheet}', desc: '用途统计-希诺赛' },
-  { sheets: ['资金汇总表-三生主业及零售板块'], tpl: '{date}_{sheet}', desc: '资金汇总-三生' },
-  { sheets: ['资金汇总表-希诺赛板块'], tpl: '{date}_{sheet}', desc: '资金汇总-希诺赛' },
-];
+var HARDCODED_DEFAULTS = [];
 
 var loadedDefaults = null; // 从 JSON 加载的规则
 

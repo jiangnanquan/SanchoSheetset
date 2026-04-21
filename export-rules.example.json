@@ -1,0 +1,7 @@
+[
+  {
+    "sheets": ["Sheet1"],
+    "tpl": "{date}_{sheet}",
+    "desc": "示例规则"
+  }
+]
