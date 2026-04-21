@@ -43,6 +43,34 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Generate placeholder icons
+        run: |
+          python3 -c "
+          import struct, zlib, os
+          os.makedirs('src-tauri/icons', exist_ok=True)
+          def make_rgba_png(size):
+              header = b'\x89PNG\r\n\x1a\n'
+              def chunk(t, d):
+                  c = t + d
+                  return struct.pack('>I', len(d)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
+              ihdr = chunk(b'IHDR', struct.pack('>IIBBBBB', size, size, 8, 6, 0, 0, 0))
+              raw = b''
+              for y in range(size):
+                  raw += b'\x00' + bytes([74, 144, 217, 255]) * size
+              idat = chunk(b'IDAT', zlib.compress(raw))
+              return header + ihdr + idat + chunk(b'IEND', b'')
+          for name, sz in [('32x32.png',32),('128x128.png',128),('128x128@2x.png',256),('icon.png',512)]:
+              with open(f'src-tauri/icons/{name}','wb') as f: f.write(make_rgba_png(sz))
+          # ICO
+          png = make_rgba_png(32)
+          with open('src-tauri/icons/icon.ico','wb') as f:
+              f.write(struct.pack('<HHH',0,1,1))
+              f.write(struct.pack('<BBBBHHII',32,32,0,0,1,32,len(png),22))
+              f.write(png)
+          print('Icons generated')
+          "
+        shell: bash
+
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:

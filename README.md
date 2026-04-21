@@ -1,4 +1,6 @@
-# Excel 报表导出工具
+# SanchoSheetset
+
+Sancho 系列工具 — Excel 报表导出工具。
 
 上传 Excel 文件（xlsx/xlsm），按规则拆分导出为多个干净的 xlsx。
 
@@ -11,7 +13,7 @@
 
 ### 直接使用（无需安装）
 
-双击 `index.html` 即可在浏览器中使用。
+双击 `web/index.html` 即可在浏览器中使用。
 
 ### 桌面应用
 
@@ -27,16 +29,18 @@
 ## 构建
 
 ```bash
-./build.sh
+./build.sh local           # 本地编译当前平台
+./build.sh release v1.0.0  # 推送 GitHub 触发全平台构建
 ```
 
 ## 文件说明
 
 | 文件 | 用途 |
 |------|------|
-| `index.html` | 主页面 |
-| `exceljs.min.js` | ExcelJS 离线库 |
-| `export-rules.json` | 导出规则配置 |
+| `web/index.html` | 主页面 |
+| `web/exceljs.min.js` | ExcelJS 离线库 |
+| `web/export-rules.json` | 导出规则配置（不上传） |
+| `src-tauri/icons/` | 应用图标（不上传） |
 
 ## 作者
 
