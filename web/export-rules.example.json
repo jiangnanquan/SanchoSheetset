@@ -1,7 +1,17 @@
 [
   {
-    "sheets": ["Sheet1"],
+    "sheets": [
+      "Sheet1"
+    ],
     "tpl": "{date}_{sheet}",
     "desc": "示例规则"
+  },
+  {
+    "sheets": [
+      "汇总表",
+      "明细表"
+    ],
+    "tpl": "{date}_{A1:汇总表}",
+    "desc": "按汇总表A1命名"
   }
 ]

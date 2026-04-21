@@ -5,6 +5,47 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SanchoSheetset - Excel 报表导出工具</title>
 <script>
+// 默认导出规则，用于“恢复默认”和首次启动。
+var DEFAULT_RULES = [
+  {
+    "sheets": [
+      "经营公司",
+      "其他公司",
+      "全部公司"
+    ],
+    "tpl": "{date}_{A1:全部公司}",
+    "desc": "日报合并"
+  },
+  {
+    "sheets": [
+      "用途统计表-三生主业及零售板块"
+    ],
+    "tpl": "{date}_{sheet}",
+    "desc": "用途统计-三生"
+  },
+  {
+    "sheets": [
+      "用途统计表-希诺赛板块"
+    ],
+    "tpl": "{date}_{sheet}",
+    "desc": "用途统计-希诺赛"
+  },
+  {
+    "sheets": [
+      "资金汇总表-三生主业及零售板块"
+    ],
+    "tpl": "{date}_{sheet}",
+    "desc": "资金汇总-三生"
+  },
+  {
+    "sheets": [
+      "资金汇总表-希诺赛板块"
+    ],
+    "tpl": "{date}_{sheet}",
+    "desc": "资金汇总-希诺赛"
+  }
+];
+
 // 优先本地 exceljs.min.js，没有则 CDN
 (function(){
   var s = document.createElement('script');
@@ -19,13 +60,14 @@
 </script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:#f0f2f5;color:#333;min-height:100vh;display:flex;flex-direction:column}
-.wrap{max-width:1200px;margin:0 auto;padding:20px 20px 0;flex:1;width:100%}
+html,body{height:100%}
+body{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:#f0f2f5;color:#333;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+.wrap{max-width:1200px;margin:0 auto;padding:20px 20px 0;flex:1;width:100%;display:flex;flex-direction:column;min-height:0;overflow:hidden}
 h1{font-size:20px;text-align:center;margin-bottom:2px}
 .subtitle{text-align:center;font-size:12px;color:#999;margin-bottom:16px}
-.cols{display:flex;gap:16px;align-items:flex-start}
-.col-left{flex:1;min-width:0}
-.col-right{width:320px;flex-shrink:0;position:sticky;top:20px}
+.cols{display:flex;gap:16px;align-items:stretch;flex:1;min-height:0}
+.col-left{flex:1;min-width:0;min-height:0;overflow:auto;padding-right:4px}
+.col-right{width:320px;flex-shrink:0;min-height:0;display:flex;flex-direction:column}
 .upload{border:2px dashed #c0c0c0;border-radius:10px;padding:28px 16px;text-align:center;cursor:pointer;transition:all .2s;background:#fff;margin-bottom:14px}
 .upload:hover,.upload.over{border-color:#4a90d9;background:#f0f6ff}
 .upload input{display:none}
@@ -37,6 +79,7 @@ h1{font-size:20px;text-align:center;margin-bottom:2px}
 .card.show{display:block}
 .card-title{font-size:14px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px}
 .badge{background:#e8f0fe;color:#4a90d9;font-size:11px;padding:1px 7px;border-radius:8px;font-weight:400}
+.sheet-summary{font-size:12px;color:#6b7280;margin-bottom:8px}
 .tags{display:flex;flex-wrap:wrap;gap:4px}
 .tag{background:#f0f4f8;padding:3px 9px;border-radius:5px;font-size:12px;color:#555}
 .rule{border:1px solid #e8e8e8;border-radius:8px;margin-bottom:8px;overflow:hidden;transition:box-shadow .15s}
@@ -62,24 +105,33 @@ h1{font-size:20px;text-align:center;margin-bottom:2px}
 .sheet-pick input{position:absolute;opacity:0;width:0;height:0}
 .sheet-pick span{display:inline-block;padding:3px 8px;border-radius:4px;font-size:11px;background:#f0f0f0;color:#666;border:1.5px solid transparent;transition:all .12s;user-select:none}
 .sheet-pick input:checked+span{background:#e8f0fe;color:#2b6cb0;border-color:#4a90d9}
-.panel{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.05);display:none}
-.panel.show{display:block}
+.panel{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.05);display:none;min-height:0;height:100%;overflow:hidden}
+.panel.show{display:flex;flex-direction:column}
 .panel-title{font-size:14px;font-weight:600;margin-bottom:10px}
 .btn{padding:8px 18px;border:none;border-radius:7px;cursor:pointer;font-size:13px;font-weight:500;transition:all .12s;width:100%;margin-bottom:6px;text-align:center}
 .btn-main{background:#4a90d9;color:#fff}.btn-main:hover{background:#3b7fc4}
 .btn-sub{background:#f0f0f0;color:#555}.btn-sub:hover{background:#e4e4e4}
 .btn-save{background:#fff;color:#4a90d9;border:1.5px solid #4a90d9}.btn-save:hover{background:#f0f6ff}
 .btn:disabled{opacity:.5;cursor:not-allowed}
-.log{font-size:12px;margin-top:10px}
+.meta{font-size:11px;color:#7b8794;line-height:1.6;background:#f8fafc;border:1px solid #edf2f7;border-radius:8px;padding:10px 12px;margin-bottom:10px;word-break:break-all}
+.meta strong{color:#4b5563}
+.log{font-size:12px;margin-top:10px;padding-top:10px;border-top:1px solid #eef1f4;overflow:auto;min-height:0;flex:1}
 .log-item{padding:3px 0;display:flex;align-items:center;gap:4px}
 .log-ok{color:#2e7d32}.log-err{color:#d32f2f}
 .log-done{margin-top:6px;font-weight:600;color:#333;font-size:13px}
 .tpl-help{font-size:11px;color:#aaa;line-height:1.6;margin-top:8px}
 .tpl-help code{background:#f0f0f0;padding:1px 4px;border-radius:3px;font-size:10px}
-.save-mode{font-size:11px;color:#bbb;margin-top:10px;text-align:center}
-.footer{text-align:center;padding:14px;font-size:12px;color:#bbb;border-top:1px solid #eee;margin-top:auto;background:#fff}
+.footer{text-align:center;padding:14px;font-size:12px;color:#bbb;border-top:1px solid #eee;background:#fff;flex-shrink:0}
 .footer .author{color:#999;font-size:12px}
-@media(max-width:800px){.cols{flex-direction:column}.col-right{width:100%;position:static}}
+@media(max-width:800px){
+  body{height:auto;overflow:auto}
+  .wrap{overflow:visible}
+  .cols{flex-direction:column}
+  .col-left{overflow:visible;padding-right:0}
+  .col-right{width:100%}
+  .panel{height:auto}
+  .log{flex:none;max-height:200px}
+}
 </style>
 </head>
 <body>
@@ -95,30 +147,32 @@ h1{font-size:20px;text-align:center;margin-bottom:2px}
   </div>
   <div class="cols">
     <div class="col-left">
+      <div class="card" id="sheetCard">
+        <div class="card-title">工作表明细 <span class="badge" id="sheetCount"></span></div>
+        <div class="sheet-summary" id="sheetSummary"></div>
+        <div class="tags" id="sheetList"></div>
+      </div>
       <div class="card" id="ruleCard">
         <div class="card-title">导出规则 <span class="badge" id="ruleCount"></span></div>
         <div id="rules"></div>
       </div>
     </div>
     <div class="col-right">
-      <div class="card" id="sheetCard">
-        <div class="card-title">工作表 <span class="badge" id="sheetCount"></span></div>
-        <div class="tags" id="sheetList"></div>
-      </div>
       <div class="panel" id="actionPanel">
         <div class="panel-title">操作</div>
         <button class="btn btn-main" id="exportBtn" onclick="exportAll()">导出全部</button>
-        <button class="btn btn-save" onclick="saveRules()">保存规则</button>
+        <button class="btn btn-sub" id="exportDirBtn" onclick="pickExportDirectory(true)">设置导出文件夹</button>
+        <button class="btn btn-save" id="saveRulesBtn" onclick="saveRules()">保存规则</button>
         <button class="btn btn-sub" onclick="addEmptyRule()">+ 添加规则</button>
         <button class="btn btn-sub" onclick="resetRules()">恢复默认</button>
-        <button class="btn btn-sub" onclick="importRulesFile()">导入规则 JSON</button>
+        <button class="btn btn-sub" id="importRulesBtn" onclick="importRulesFile()">导入规则 JSON</button>
+        <div class="meta" id="saveMode"></div>
         <div class="tpl-help">
           <div style="font-size:11px;color:#999;margin-bottom:4px">文件名变量</div>
           <code>{date}</code> 今日 yyyymmdd<br>
           <code>{sheet}</code> 首个工作表名<br>
           <code>{A1:表名}</code> 指定表的 A1 值
         </div>
-        <div class="save-mode" id="saveMode"></div>
         <div class="log" id="log"></div>
       </div>
     </div>
@@ -131,45 +185,120 @@ var srcWorkbook = null;
 var sheetNames = [];
 var rules = [];
 var ruleSeq = 0;
-var jsonAvailable = false; // 是否成功从 JSON 文件加载过
+var IS_DESKTOP_APP = !!(window.sanchoDesktop && window.sanchoDesktop.isDesktop);
+var RULES_JSON_SUFFIX = '-导出规则.json';
+var currentWorkbookName = '';
+var currentRuleDefaults = normalizeRules(DEFAULT_RULES) || [];
+var currentRulesSource = currentRuleDefaults.length ? '默认规则' : '未设置默认规则';
+var currentExportDir = null;
+var ruleDraftTimer = null;
 
-var HARDCODED_DEFAULTS = [];
-
-var loadedDefaults = null; // 从 JSON 加载的规则
-
-// 启动时尝试读取同目录 export-rules.json
-(function() {
-  fetch('export-rules.json').then(function(r) {
-    if (!r.ok) throw new Error('not found');
-    return r.json();
-  }).then(function(data) {
-    if (Array.isArray(data) && data.length > 0) {
-      loadedDefaults = data;
-      jsonAvailable = true;
-      updateSaveMode();
-    }
-  }).catch(function() {
-    updateSaveMode();
-  });
+(async function() {
+  adaptUiForRuntime();
+  document.getElementById('actionPanel').classList.add('show');
+  if (IS_DESKTOP_APP && window.sanchoDesktop && window.sanchoDesktop.getSession) {
+    await restoreSession();
+  }
+  if (!rules.length) loadAndRenderRules(currentRuleDefaults);
+  updateSaveMode();
 })();
 
-function updateSaveMode() {
-  var el = document.getElementById('saveMode');
-  if (jsonAvailable) {
-    el.textContent = '规则来源：export-rules.json';
-  } else {
-    el.textContent = '规则来源：内置默认（未找到 export-rules.json）';
+function adaptUiForRuntime() {
+  if (IS_DESKTOP_APP) {
+    document.getElementById('saveRulesBtn').textContent = '保存规则 JSON';
+    document.getElementById('importRulesBtn').textContent = '导入规则 JSON';
   }
 }
 
+function updateSaveMode() {
+  var exportText = currentExportDir && currentExportDir.path ? currentExportDir.path : '未设置';
+  document.getElementById('saveMode').innerHTML =
+    '<div><strong>规则来源：</strong>' + h(currentRulesSource) + '</div>'
+    + '<div><strong>当前 Excel：</strong>' + h(currentWorkbookName || '未选择') + '</div>'
+    + '<div><strong>导出文件夹：</strong>' + h(exportText) + '</div>';
+}
+
 function getDefaults() {
-  return loadedDefaults || HARDCODED_DEFAULTS;
+  return currentRuleDefaults || [];
+}
+
+async function restoreSession() {
+  try {
+    var session = await window.sanchoDesktop.getSession();
+    if (!session) return;
+
+    if (session.rulesText) {
+      var restoredRules = tryParseRules(session.rulesText);
+      if (restoredRules) {
+        currentRuleDefaults = restoredRules;
+        currentRulesSource = session.lastRulesName
+          ? ('已恢复上次规则：' + session.lastRulesName)
+          : '已恢复上次规则草稿';
+        loadAndRenderRules(currentRuleDefaults, { skipPersist: true });
+      }
+    }
+
+    if (session.lastExportDir) {
+      currentExportDir = {
+        path: session.lastExportDir,
+        name: basename(session.lastExportDir)
+      };
+    }
+
+    updateSaveMode();
+
+    if (session.excelData) {
+      var bytes = session.excelData instanceof Uint8Array ? session.excelData : new Uint8Array(session.excelData);
+      await loadWorkbookFromBuffer(
+        bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+        session.lastExcelName || basename(session.lastExcelPath || ''),
+        { path: session.lastExcelPath, skipPersist: true }
+      );
+    }
+
+    if (Array.isArray(session.warnings)) {
+      session.warnings.forEach(function(message) {
+        logItem(document.getElementById('log'), 'err', message);
+      });
+    }
+  } catch (err) {
+    logItem(document.getElementById('log'), 'err', '恢复上次工作状态失败');
+  }
+}
+
+function persistRuleDraft(options) {
+  if (!IS_DESKTOP_APP || !window.sanchoDesktop || !window.sanchoDesktop.setSession) return;
+  clearTimeout(ruleDraftTimer);
+  ruleDraftTimer = setTimeout(function() {
+    window.sanchoDesktop.setSession({
+      lastRulesText: JSON.stringify(exportRulesData(), null, 2),
+      lastRulesName: options && options.name ? options.name : buildRulesJsonFilename()
+    }).catch(function() {});
+  }, 120);
+}
+
+function tryParseRules(text) {
+  try {
+    return normalizeRules(JSON.parse(text));
+  } catch (err) {
+    return null;
+  }
+}
+
+function basename(filePath) {
+  return (filePath || '').split(/[\\/]/).pop();
 }
 
 // ========== 上传 ==========
 var dropZone = document.getElementById('dropZone');
 var fileInput = document.getElementById('fileInput');
-dropZone.addEventListener('click', function() { fileInput.click(); });
+dropZone.addEventListener('click', function() {
+  if (IS_DESKTOP_APP && window.sanchoDesktop && window.sanchoDesktop.openExcelFile) {
+    openExcelFromDesktop();
+    return;
+  }
+  fileInput.click();
+});
 dropZone.addEventListener('dragover', function(e) { e.preventDefault(); dropZone.classList.add('over'); });
 dropZone.addEventListener('dragleave', function() { dropZone.classList.remove('over'); });
 dropZone.addEventListener('drop', function(e) { e.preventDefault(); dropZone.classList.remove('over'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
@@ -177,31 +306,66 @@ fileInput.addEventListener('change', function(e) { if (e.target.files[0]) handle
 
 async function handleFile(file) {
   document.getElementById('fileName').textContent = file.name + ' (读取中...)';
-  var buf = await file.arrayBuffer();
+  await loadWorkbookFromBuffer(await file.arrayBuffer(), file.name, { path: file.path || '' });
+}
+
+async function openExcelFromDesktop() {
+  document.getElementById('fileName').textContent = '选择 Excel 中...';
+  try {
+    var result = await window.sanchoDesktop.openExcelFile();
+    if (!result || result.canceled || !result.data) {
+      document.getElementById('fileName').textContent = currentWorkbookName || '';
+      return;
+    }
+    var bytes = result.data instanceof Uint8Array ? result.data : new Uint8Array(result.data);
+    await loadWorkbookFromBuffer(
+      bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+      result.name,
+      { path: result.path, skipPersist: true }
+    );
+  } catch (err) {
+    document.getElementById('fileName').textContent = currentWorkbookName || '';
+    showToast('读取 Excel 失败', true);
+  }
+}
+
+async function loadWorkbookFromBuffer(buf, fileName, options) {
   srcWorkbook = new ExcelJS.Workbook();
   await srcWorkbook.xlsx.load(buf);
   sheetNames = [];
   srcWorkbook.eachSheet(function(ws) { sheetNames.push(ws.name); });
-  document.getElementById('fileName').textContent = file.name;
+  currentWorkbookName = fileName || currentWorkbookName;
+  if (!options || !options.skipPersist) {
+    if (IS_DESKTOP_APP && window.sanchoDesktop && window.sanchoDesktop.setSession && options && options.path) {
+      window.sanchoDesktop.setSession({
+        lastExcelPath: options.path,
+        lastExcelName: fileName || basename(options.path)
+      }).catch(function() {});
+    }
+  }
+  document.getElementById('fileName').textContent = currentWorkbookName;
   showSheets();
-  loadAndRenderRules();
+  loadAndRenderRules(rules.length ? exportRulesData() : getDefaults(), { skipPersist: true });
 }
 
 function showSheets() {
   document.getElementById('sheetList').innerHTML = sheetNames.map(function(n) { return '<span class="tag">' + h(n) + '</span>'; }).join('');
   document.getElementById('sheetCount').textContent = sheetNames.length + ' 个';
+  document.getElementById('sheetSummary').textContent = sheetNames.length ? '当前文件共 ' + sheetNames.length + ' 个工作表，明细如下。' : '当前文件没有可用工作表。';
   document.getElementById('sheetCard').classList.add('show');
   document.getElementById('actionPanel').classList.add('show');
+  updateSaveMode();
 }
 
 // ========== 规则管理 ==========
-function loadAndRenderRules() {
+function loadAndRenderRules(seedRules, options) {
   rules = []; ruleSeq = 0;
   document.getElementById('rules').innerHTML = '';
-  getDefaults().forEach(function(r) { pushRule(r.sheets || [], r.tpl || '{date}_{sheet}', r.desc || ''); });
+  (normalizeRules(seedRules || getDefaults()) || []).forEach(function(r) { pushRule(r.sheets || [], r.tpl || '{date}_{sheet}', r.desc || ''); });
   document.getElementById('ruleCard').classList.add('show');
   document.getElementById('log').innerHTML = '';
   updCount();
+  if (!options || !options.skipPersist) persistRuleDraft();
 }
 
 function pushRule(sheets, tpl, desc) {
@@ -211,43 +375,67 @@ function pushRule(sheets, tpl, desc) {
   updCount();
 }
 
-function addEmptyRule() { pushRule([], '{date}_{sheet}', '新规则'); }
+function addEmptyRule() {
+  pushRule([], '{date}_{sheet}', '新规则');
+  persistRuleDraft();
+}
 
 function resetRules() {
-  loadedDefaults = null;
-  jsonAvailable = false;
-  fetch('export-rules.json').then(function(r) {
-    if (!r.ok) throw new Error('');
-    return r.json();
-  }).then(function(data) {
-    if (Array.isArray(data) && data.length > 0) { loadedDefaults = data; jsonAvailable = true; }
-    updateSaveMode(); loadAndRenderRules();
-  }).catch(function() { updateSaveMode(); loadAndRenderRules(); });
+  currentRuleDefaults = normalizeRules(DEFAULT_RULES) || [];
+  currentRulesSource = currentRuleDefaults.length ? '默认规则' : '未设置默认规则';
+  updateSaveMode();
+  loadAndRenderRules(currentRuleDefaults);
+  showToast('已恢复默认规则');
 }
 
-function saveRules() {
-  var data = rules.map(function(r) { return { sheets: r.sheets, tpl: r.tpl, desc: r.desc }; });
-  var json = JSON.stringify(data, null, 2);
-  downloadBlob(new Blob([json], { type: 'application/json' }), 'export-rules.json');
-  showToast('已下载 export-rules.json，请替换同目录下的文件');
+async function saveRules() {
+  var data = exportRulesData();
+  if (IS_DESKTOP_APP && window.sanchoDesktop && window.sanchoDesktop.saveRulesJson) {
+    try {
+      var result = await window.sanchoDesktop.saveRulesJson({
+        defaultName: buildRulesJsonFilename(),
+        text: JSON.stringify(data, null, 2)
+      });
+      if (!result || result.canceled) return;
+      currentRuleDefaults = normalizeRules(data) || [];
+      currentRulesSource = '已保存到规则文件：' + result.name;
+      updateSaveMode();
+      showToast('已保存 ' + result.name);
+      return;
+    } catch (err) {
+      showToast('保存规则失败', true);
+      return;
+    }
+  }
+  var filename = buildRulesJsonFilename();
+  downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' }), filename);
+  currentRuleDefaults = normalizeRules(data) || [];
+  currentRulesSource = '已导出规则文件：' + filename;
+  updateSaveMode();
+  showToast('已导出 ' + filename);
 }
 
-function importRulesFile() { document.getElementById('importInput').click(); }
+async function importRulesFile() {
+  if (IS_DESKTOP_APP && window.sanchoDesktop && window.sanchoDesktop.openRulesJson) {
+    try {
+      var result = await window.sanchoDesktop.openRulesJson();
+      if (!result || result.canceled || !result.text) return;
+      importRulesText(result.text, result.name);
+    } catch (err) {
+      showToast('读取规则失败', true);
+    }
+    return;
+  }
+  document.getElementById('importInput').click();
+}
 document.getElementById('importInput').addEventListener('change', function(e) {
   var file = e.target.files[0];
   if (!file) return;
-  var reader = new FileReader();
-  reader.onload = function(ev) {
-    try {
-      var data = JSON.parse(ev.target.result);
-      if (Array.isArray(data)) {
-        loadedDefaults = data; jsonAvailable = true;
-        updateSaveMode(); loadAndRenderRules();
-        showToast('规则已导入');
-      }
-    } catch(err) { showToast('JSON 格式错误', true); }
-  };
-  reader.readAsText(file);
+  file.text().then(function(text) {
+    return importRulesText(text, file.name);
+  }).catch(function() {
+    showToast('读取规则失败', true);
+  });
   e.target.value = '';
 });
 
@@ -278,9 +466,9 @@ function renderOneRule(r) {
 }
 
 function togRule(id) { var el = document.getElementById('r-' + id); if (el) el.classList.toggle('open'); }
-function delRule(id) { rules = rules.filter(function(r) { return r.id !== id; }); var el = document.getElementById('r-' + id); if (el) el.remove(); updCount(); }
-function updDesc(id, val) { var r = rules.find(function(x) { return x.id === id; }); if (r) r.desc = val; }
-function updTpl(id, val) { var r = rules.find(function(x) { return x.id === id; }); if (r) { r.tpl = val; refreshPreview(id); } }
+function delRule(id) { rules = rules.filter(function(r) { return r.id !== id; }); var el = document.getElementById('r-' + id); if (el) el.remove(); updCount(); persistRuleDraft(); }
+function updDesc(id, val) { var r = rules.find(function(x) { return x.id === id; }); if (r) { r.desc = val; persistRuleDraft(); } }
+function updTpl(id, val) { var r = rules.find(function(x) { return x.id === id; }); if (r) { r.tpl = val; refreshPreview(id); persistRuleDraft(); } }
 
 function togSheet(id, cb) {
   var r = rules.find(function(x) { return x.id === id; });
@@ -289,6 +477,7 @@ function togSheet(id, cb) {
   if (cb.checked) { if (r.sheets.indexOf(sn) < 0) r.sheets.push(sn); }
   else { r.sheets = r.sheets.filter(function(s) { return s !== sn; }); }
   refreshPreview(id);
+  persistRuleDraft();
 }
 
 function refreshPreview(id) {
@@ -301,9 +490,70 @@ function refreshPreview(id) {
   if (full) { full.textContent = fn; full.style.color = empty ? '#ccc' : '#4a90d9'; }
   if (short) { short.textContent = empty ? '' : fn; }
 }
+
+function exportRulesData() {
+  return rules.map(function(r) {
+    return { sheets: r.sheets.slice(), tpl: r.tpl, desc: r.desc };
+  });
+}
+
+function normalizeRules(data) {
+  if (!Array.isArray(data)) return null;
+  return data.map(function(r) {
+    return {
+      sheets: Array.isArray(r && r.sheets) ? r.sheets.filter(function(s) { return typeof s === 'string' && s.trim(); }) : [],
+      tpl: r && typeof r.tpl === 'string' && r.tpl ? r.tpl : '{date}_{sheet}',
+      desc: r && typeof r.desc === 'string' ? r.desc : ''
+    };
+  });
+}
+
+function importRulesText(text, fileName) {
+  try {
+    var normalized = tryParseRules(text);
+    if (!normalized) { showToast('JSON 格式错误', true); return; }
+    currentRuleDefaults = normalized;
+    currentRulesSource = fileName
+      ? ('已导入规则：' + fileName)
+      : '已导入规则 JSON';
+    updateSaveMode();
+    loadAndRenderRules(currentRuleDefaults, { skipPersist: true });
+    persistRuleDraft({ name: fileName || buildRulesJsonFilename() });
+    showToast(fileName ? ('规则已导入：' + fileName) : '规则已导入');
+  } catch (err) {
+    showToast('JSON 格式错误', true);
+  }
+}
+
+function buildRulesJsonFilename() {
+  var stem = (currentWorkbookName || 'SanchoSheetset').split('/').pop().replace(/\.[^.]+$/, '') || 'SanchoSheetset';
+  return sanitize(stem) + RULES_JSON_SUFFIX;
+}
 /* __EXPORT__ */
 
 // ========== 导出 ==========
+async function pickExportDirectory(forcePrompt) {
+  if (!IS_DESKTOP_APP || !window.sanchoDesktop || !window.sanchoDesktop.pickExportDirectory) {
+    return null;
+  }
+  if (!forcePrompt && currentExportDir && currentExportDir.path) {
+    return currentExportDir;
+  }
+  try {
+    var result = await window.sanchoDesktop.pickExportDirectory();
+    if (!result || result.canceled || !result.path) {
+      return forcePrompt ? null : currentExportDir;
+    }
+    currentExportDir = result;
+    updateSaveMode();
+    showToast('导出文件夹已设置为 ' + result.name);
+    return currentExportDir;
+  } catch (err) {
+    if (forcePrompt) showToast('选择导出文件夹失败', true);
+    return currentExportDir;
+  }
+}
+
 async function exportAll() {
   if (!srcWorkbook) { showToast('请先上传文件', true); return; }
   var btn = document.getElementById('exportBtn');
@@ -311,6 +561,16 @@ async function exportAll() {
   var logEl = document.getElementById('log');
   logEl.innerHTML = '';
   var ok = 0, fail = 0;
+  var exportDir = null;
+
+  if (IS_DESKTOP_APP && window.sanchoDesktop && window.sanchoDesktop.pickExportDirectory) {
+    exportDir = await pickExportDirectory(false);
+    if (!exportDir || !exportDir.path) {
+      btn.disabled = false; btn.textContent = '导出全部';
+      showToast('请先设置导出文件夹', true);
+      return;
+    }
+  }
 
   for (var idx = 0; idx < rules.length; idx++) {
     var r = rules[idx];
@@ -320,7 +580,15 @@ async function exportAll() {
     try {
       var blob = await buildNewXlsx(r.sheets);
       var fn = resolveName(r) + '.xlsx';
-      downloadBlob(blob, fn);
+      if (exportDir && exportDir.path && window.sanchoDesktop && window.sanchoDesktop.writeExportFile) {
+        await window.sanchoDesktop.writeExportFile({
+          dirPath: exportDir.path,
+          filename: fn,
+          data: await blob.arrayBuffer()
+        });
+      } else {
+        downloadBlob(blob, fn);
+      }
       logItem(logEl, 'ok', fn); ok++;
     } catch (e) {
       logItem(logEl, 'err', (r.desc || '规则' + (idx+1)) + '：' + e.message); fail++;

@@ -4,10 +4,28 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
+repo_slug_from_remote() {
+  local remote_url
+  remote_url=$(git remote get-url origin 2>/dev/null || echo "")
+  if [ -z "$remote_url" ]; then
+    return 1
+  fi
+  printf '%s\n' "$remote_url" | sed -E 's#(git@github.com:|https://github.com/)##; s#\.git$##'
+}
+
+repo_slug_from_package() {
+  node -e '
+const pkg = require("./package.json");
+const source = (pkg.repository && pkg.repository.url) || pkg.homepage || "";
+const match = source.match(/github\.com[/:]([^/]+\/[^/.]+)/);
+if (match) process.stdout.write(match[1]);
+'
+}
+
 usage() {
   echo "用法:"
   echo "  ./build.sh local           本地编译当前平台"
-  echo "  ./build.sh release [版本]  推送到 GitHub，触发全平台构建"
+  echo "  ./build.sh release [版本]  推送 GitHub 并触发 Win/macOS 构建"
   echo ""
   echo "示例:"
   echo "  ./build.sh local"
@@ -18,45 +36,37 @@ usage() {
 build_local() {
   echo "=== 本地编译 ==="
 
-  # 检查 cargo
-  if ! command -v cargo &>/dev/null; then
-    echo "需要安装 Rust: https://rustup.rs"
+  if ! command -v npm &>/dev/null; then
+    echo "需要先安装 Node.js / npm"
     exit 1
   fi
 
-  # 检查 tauri-cli
-  if ! cargo tauri --version &>/dev/null; then
-    echo "安装 Tauri CLI..."
-    cargo install tauri-cli --version "^2"
+  if [ ! -d node_modules ]; then
+    echo "安装 Electron 依赖..."
+    npm install
   fi
 
-  echo "开始编译（首次约 5-8 分钟）..."
-  cargo tauri build 2>&1
+  case "$(uname -s)" in
+    Darwin)
+      echo "开始构建 macOS 安装包..."
+      npm run dist:mac
+      ;;
+    Linux)
+      echo "当前脚本未启用 Linux 打包；如需扩展请补充目标。"
+      exit 1
+      ;;
+    *)
+      echo "开始构建 Windows 安装包..."
+      npm run dist:win
+      ;;
+  esac
 
   # 找到产出文件
   echo ""
   echo "=== 编译完成 ==="
   echo "产出文件:"
 
-  BUNDLE_DIR="src-tauri/target/release/bundle"
-  if [ -d "$BUNDLE_DIR/dmg" ]; then
-    ls -lh "$BUNDLE_DIR/dmg/"*.dmg 2>/dev/null && echo ""
-  fi
-  if [ -d "$BUNDLE_DIR/macos" ]; then
-    ls -lhd "$BUNDLE_DIR/macos/"*.app 2>/dev/null && echo ""
-  fi
-  if [ -d "$BUNDLE_DIR/nsis" ]; then
-    ls -lh "$BUNDLE_DIR/nsis/"*.exe 2>/dev/null && echo ""
-  fi
-  if [ -d "$BUNDLE_DIR/appimage" ]; then
-    ls -lh "$BUNDLE_DIR/appimage/"*.AppImage 2>/dev/null && echo ""
-  fi
-  if [ -d "$BUNDLE_DIR/deb" ]; then
-    ls -lh "$BUNDLE_DIR/deb/"*.deb 2>/dev/null && echo ""
-  fi
-
-  echo "也可以直接运行:"
-  echo "  open $BUNDLE_DIR/macos/*.app"
+  ls -lh release/* 2>/dev/null || true
 }
 
 # ========== 远程发布 ==========
@@ -69,10 +79,22 @@ build_release() {
     exit 1
   fi
 
-  REPO_URL=$(git remote get-url origin 2>/dev/null || echo "")
-  if [ -z "$REPO_URL" ]; then
-    echo "创建 GitHub 仓库..."
-    gh repo create excel-export-tool --public --source=. --remote=origin --push
+  TARGET_REPO_SLUG=$(repo_slug_from_package || echo "jiangnanquan/SanchoSheetset")
+  CURRENT_REPO_SLUG=$(repo_slug_from_remote || echo "")
+
+  if [ -z "$CURRENT_REPO_SLUG" ]; then
+    echo "创建 GitHub 仓库: $TARGET_REPO_SLUG"
+    gh repo create "$TARGET_REPO_SLUG" --public --source=. --remote=origin
+    REPO_SLUG="$TARGET_REPO_SLUG"
+  else
+    if [ "$CURRENT_REPO_SLUG" != "$TARGET_REPO_SLUG" ]; then
+      echo "origin 当前指向 $CURRENT_REPO_SLUG，发布前切换到 $TARGET_REPO_SLUG"
+      if ! gh repo view "$TARGET_REPO_SLUG" &>/dev/null; then
+        gh repo create "$TARGET_REPO_SLUG" --public
+      fi
+      git remote set-url origin "https://github.com/$TARGET_REPO_SLUG.git"
+    fi
+    REPO_SLUG="$TARGET_REPO_SLUG"
   fi
 
   if [ -n "$(git status --porcelain)" ]; then
@@ -90,8 +112,8 @@ build_release() {
 
   echo ""
   echo "=== 已触发 GitHub Actions ==="
-  echo "进度: https://github.com/jiangnanquan/excel-export-tool/actions"
-  echo "下载: https://github.com/jiangnanquan/excel-export-tool/releases"
+  echo "进度: https://github.com/$REPO_SLUG/actions"
+  echo "下载: https://github.com/$REPO_SLUG/releases"
 }
 
 # ========== 入口 ==========

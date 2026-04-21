@@ -1,8 +1,11 @@
 target/
 node_modules/
 dist/
+release/
 *.log
 .DS_Store
 Thumbs.db
-web/export-rules.json
-src-tauri/icons/
+web/Excel分割到独立文件.html
+web/*导出规则.json
+web/*.local.json
+!web/export-rules.example.json

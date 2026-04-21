@@ -1,46 +1,64 @@
 # SanchoSheetset
 
-Sancho 系列工具 — Excel 报表导出工具。
+SanchoSheetset 是一个 Electron 桌面工具，用来把一个 Excel 工作簿按规则拆分成多个独立的 `.xlsx` 文件，适合日报、资金表、用途统计等固定报表场景。
 
-上传 Excel 文件（xlsx/xlsm），按规则拆分导出为多个干净的 xlsx。
+## 当前能力
 
-- 保留原始格式（字体、颜色、边框、合并单元格、列宽、行高）
-- 自动去除 VBA 宏、Power Query 连接、外部链接
-- 公式固化为值，以显示为准
-- 规则可自定义、可保存
+- 选择 Excel 文件并读取全部工作表
+- 用多条规则组合导出不同工作簿
+- 保留列宽、行高、合并单元格和样式
+- 将公式导出为结果值，避免带出宏、外链和查询连接
+- 导入、编辑、保存规则 JSON
+- 记住上次使用的 Excel、规则草稿和导出文件夹
+- 直接导出到本地目录，不再依赖浏览器下载和沙盒授权
 
-## 使用方式
+## 运行方式
 
-### 直接使用（无需安装）
-
-双击 `web/index.html` 即可在浏览器中使用。
-
-### 桌面应用
-
-从 [Releases](../../releases) 下载对应平台安装包：
-
-| 平台 | 文件 |
-|------|------|
-| Windows x64 | `.exe` (NSIS 安装包) |
-| macOS (Apple Silicon) | `.dmg` |
-| macOS (Intel) | `.dmg` |
-| Linux | `.AppImage` / `.deb` |
-
-## 构建
+### 本地开发
 
 ```bash
-./build.sh local           # 本地编译当前平台
-./build.sh release v1.0.0  # 推送 GitHub 触发全平台构建
+npm install
+npm start
 ```
 
-## 文件说明
+### 本地打包
 
-| 文件 | 用途 |
-|------|------|
-| `web/index.html` | 主页面 |
-| `web/exceljs.min.js` | ExcelJS 离线库 |
-| `web/export-rules.json` | 导出规则配置（不上传） |
-| `src-tauri/icons/` | 应用图标（不上传） |
+```bash
+./build.sh local
+```
+
+### GitHub 发布
+
+```bash
+./build.sh release v1.0.0
+```
+
+推送 tag 后，GitHub Actions 会产出：
+
+- Windows x64 安装包
+- macOS Apple Silicon `.dmg`
+- macOS Intel `.dmg`
+
+## 技术栈
+
+- Electron
+- Electron Builder
+- 原生文件对话框 + 本地文件系统读写
+- ExcelJS
+
+## 项目结构
+
+- `package.json`: 应用和打包配置
+- `electron/main.js`: 主进程、文件对话框和本地持久化
+- `electron/preload.js`: 渲染层安全桥接
+- `web/index.html`: 桌面应用界面和 Excel 导出逻辑
+- `web/export-rules.example.json`: 规则示例
+- `build/icons/`: 安装包图标
+- `.github/workflows/build.yml`: Win/macOS 构建与 GitHub Release
+
+## 开源说明
+
+本项目按 MIT License 开源。
 
 ## 作者
 
