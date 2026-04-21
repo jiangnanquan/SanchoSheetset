@@ -1,0 +1,39 @@
+{
+  "productName": "Excel报表导出工具",
+  "version": "1.0.0",
+  "identifier": "com.ganquan.excel-export-tool",
+  "build": {
+    "frontendDist": "../",
+    "devUrl": "http://localhost:1420"
+  },
+  "app": {
+    "title": "Excel 报表导出工具",
+    "windows": [
+      {
+        "title": "Excel 报表导出工具",
+        "width": 1100,
+        "height": 750,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "installerIcon": "icons/icon.ico"
+      }
+    }
+  }
+}

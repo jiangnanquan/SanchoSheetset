@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Excel 报表导出工具</title>
+<script>
+// 优先本地 exceljs.min.js，没有则 CDN
+(function(){
+  var s = document.createElement('script');
+  s.src = 'exceljs.min.js';
+  s.onerror = function() {
+    var f = document.createElement('script');
+    f.src = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+    document.head.appendChild(f);
+  };
+  document.head.appendChild(s);
+})();
+</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:#f0f2f5;color:#333;min-height:100vh;display:flex;flex-direction:column}
+.wrap{max-width:1200px;margin:0 auto;padding:20px 20px 0;flex:1;width:100%}
+h1{font-size:20px;text-align:center;margin-bottom:2px}
+.subtitle{text-align:center;font-size:12px;color:#999;margin-bottom:16px}
+.cols{display:flex;gap:16px;align-items:flex-start}
+.col-left{flex:1;min-width:0}
+.col-right{width:320px;flex-shrink:0;position:sticky;top:20px}
+.upload{border:2px dashed #c0c0c0;border-radius:10px;padding:28px 16px;text-align:center;cursor:pointer;transition:all .2s;background:#fff;margin-bottom:14px}
+.upload:hover,.upload.over{border-color:#4a90d9;background:#f0f6ff}
+.upload input{display:none}
+.upload-icon{font-size:28px;margin-bottom:4px;color:#bbb}
+.upload-text{font-size:14px;color:#666}
+.upload-hint{font-size:11px;color:#aaa;margin-top:4px}
+.upload-file{margin-top:6px;font-size:13px;color:#4a90d9;font-weight:600;word-break:break-all}
+.card{background:#fff;border-radius:10px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.05);display:none}
+.card.show{display:block}
+.card-title{font-size:14px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.badge{background:#e8f0fe;color:#4a90d9;font-size:11px;padding:1px 7px;border-radius:8px;font-weight:400}
+.tags{display:flex;flex-wrap:wrap;gap:4px}
+.tag{background:#f0f4f8;padding:3px 9px;border-radius:5px;font-size:12px;color:#555}
+.rule{border:1px solid #e8e8e8;border-radius:8px;margin-bottom:8px;overflow:hidden;transition:box-shadow .15s}
+.rule:hover{box-shadow:0 1px 6px rgba(0,0,0,.05)}
+.rule-head{display:flex;align-items:center;padding:8px 12px;cursor:pointer;gap:6px;user-select:none;background:#fafbfc}
+.rule-head:hover{background:#f0f4f8}
+.rule-arrow{font-size:10px;color:#aaa;transition:transform .2s;flex-shrink:0;width:14px;text-align:center}
+.rule.open .rule-arrow{transform:rotate(90deg)}
+.rule-name-input{flex:1;font-size:13px;font-weight:600;color:#333;border:none;background:transparent;outline:none;padding:0;min-width:0}
+.rule-name-input:focus{border-bottom:1.5px solid #4a90d9}
+.rule-pv{font-size:11px;color:#4a90d9;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0}
+.rule-del{background:none;border:none;color:#ddd;cursor:pointer;font-size:16px;line-height:1;flex-shrink:0;padding:0 2px}
+.rule-del:hover{color:#e53935}
+.rule-body{display:none;padding:10px 12px 12px;border-top:1px solid #f0f0f0}
+.rule.open .rule-body{display:block}
+.field{margin-bottom:8px}
+.field-label{font-size:11px;color:#999;margin-bottom:3px}
+.field input[type=text]{width:100%;padding:5px 8px;border:1px solid #ddd;border-radius:5px;font-size:12px}
+.field input[type=text]:focus{outline:none;border-color:#4a90d9}
+.preview-full{background:#f8fafb;border:1px solid #e8eff5;border-radius:5px;padding:6px 10px;font-size:12px;color:#4a90d9;font-weight:500;margin-bottom:8px;word-break:break-all}
+.sheet-picks{display:flex;flex-wrap:wrap;gap:4px}
+.sheet-pick{position:relative;cursor:pointer}
+.sheet-pick input{position:absolute;opacity:0;width:0;height:0}
+.sheet-pick span{display:inline-block;padding:3px 8px;border-radius:4px;font-size:11px;background:#f0f0f0;color:#666;border:1.5px solid transparent;transition:all .12s;user-select:none}
+.sheet-pick input:checked+span{background:#e8f0fe;color:#2b6cb0;border-color:#4a90d9}
+.panel{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.05);display:none}
+.panel.show{display:block}
+.panel-title{font-size:14px;font-weight:600;margin-bottom:10px}
+.btn{padding:8px 18px;border:none;border-radius:7px;cursor:pointer;font-size:13px;font-weight:500;transition:all .12s;width:100%;margin-bottom:6px;text-align:center}
+.btn-main{background:#4a90d9;color:#fff}.btn-main:hover{background:#3b7fc4}
+.btn-sub{background:#f0f0f0;color:#555}.btn-sub:hover{background:#e4e4e4}
+.btn-save{background:#fff;color:#4a90d9;border:1.5px solid #4a90d9}.btn-save:hover{background:#f0f6ff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.log{font-size:12px;margin-top:10px}
+.log-item{padding:3px 0;display:flex;align-items:center;gap:4px}
+.log-ok{color:#2e7d32}.log-err{color:#d32f2f}
+.log-done{margin-top:6px;font-weight:600;color:#333;font-size:13px}
+.tpl-help{font-size:11px;color:#aaa;line-height:1.6;margin-top:8px}
+.tpl-help code{background:#f0f0f0;padding:1px 4px;border-radius:3px;font-size:10px}
+.save-mode{font-size:11px;color:#bbb;margin-top:10px;text-align:center}
+.footer{text-align:center;padding:14px;font-size:12px;color:#bbb;border-top:1px solid #eee;margin-top:auto;background:#fff}
+.footer .author{color:#999;font-size:12px}
+@media(max-width:800px){.cols{flex-direction:column}.col-right{width:100%;position:static}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Excel 报表导出工具</h1>
+  <p class="subtitle">上传 Excel，按规则拆分导出干净 xlsx（保留格式，无宏无连接）</p>
+  <div class="upload" id="dropZone">
+    <div class="upload-icon">&#128196;</div>
+    <div class="upload-text">点击选择文件，或拖拽到这里</div>
+    <div class="upload-hint">支持 .xlsx / .xlsm / .xls</div>
+    <div class="upload-file" id="fileName"></div>
+    <input type="file" id="fileInput" accept=".xlsx,.xlsm,.xls">
+  </div>
+  <div class="cols">
+    <div class="col-left">
+      <div class="card" id="ruleCard">
+        <div class="card-title">导出规则 <span class="badge" id="ruleCount"></span></div>
+        <div id="rules"></div>
+      </div>
+    </div>
+    <div class="col-right">
+      <div class="card" id="sheetCard">
+        <div class="card-title">工作表 <span class="badge" id="sheetCount"></span></div>
+        <div class="tags" id="sheetList"></div>
+      </div>
+      <div class="panel" id="actionPanel">
+        <div class="panel-title">操作</div>
+        <button class="btn btn-main" id="exportBtn" onclick="exportAll()">导出全部</button>
+        <button class="btn btn-save" onclick="saveRules()">保存规则</button>
+        <button class="btn btn-sub" onclick="addEmptyRule()">+ 添加规则</button>
+        <button class="btn btn-sub" onclick="resetRules()">恢复默认</button>
+        <button class="btn btn-sub" onclick="importRulesFile()">导入规则 JSON</button>
+        <div class="tpl-help">
+          <div style="font-size:11px;color:#999;margin-bottom:4px">文件名变量</div>
+          <code>{date}</code> 今日 yyyymmdd<br>
+          <code>{sheet}</code> 首个工作表名<br>
+          <code>{A1:表名}</code> 指定表的 A1 值
+        </div>
+        <div class="save-mode" id="saveMode"></div>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="footer"><div class="author">作者：甘泉 &nbsp;|&nbsp; 13857867800</div></div>
+<input type="file" id="importInput" accept=".json" style="display:none">
+<script>
+var srcWorkbook = null;
+var sheetNames = [];
+var rules = [];
+var ruleSeq = 0;
+var jsonAvailable = false; // 是否成功从 JSON 文件加载过
+
+var HARDCODED_DEFAULTS = [
+  { sheets: ['经营公司', '其他公司', '全部公司'], tpl: '{date}_{A1:全部公司}', desc: '日报合并' },
+  { sheets: ['用途统计表-三生主业及零售板块'], tpl: '{date}_{sheet}', desc: '用途统计-三生' },
+  { sheets: ['用途统计表-希诺赛板块'], tpl: '{date}_{sheet}', desc: '用途统计-希诺赛' },
+  { sheets: ['资金汇总表-三生主业及零售板块'], tpl: '{date}_{sheet}', desc: '资金汇总-三生' },
+  { sheets: ['资金汇总表-希诺赛板块'], tpl: '{date}_{sheet}', desc: '资金汇总-希诺赛' },
+];
+
+var loadedDefaults = null; // 从 JSON 加载的规则
+
+// 启动时尝试读取同目录 export-rules.json
+(function() {
+  fetch('export-rules.json').then(function(r) {
+    if (!r.ok) throw new Error('not found');
+    return r.json();
+  }).then(function(data) {
+    if (Array.isArray(data) && data.length > 0) {
+      loadedDefaults = data;
+      jsonAvailable = true;
+      updateSaveMode();
+    }
+  }).catch(function() {
+    updateSaveMode();
+  });
+})();
+
+function updateSaveMode() {
+  var el = document.getElementById('saveMode');
+  if (jsonAvailable) {
+    el.textContent = '规则来源：export-rules.json';
+  } else {
+    el.textContent = '规则来源：内置默认（未找到 export-rules.json）';
+  }
+}
+
+function getDefaults() {
+  return loadedDefaults || HARDCODED_DEFAULTS;
+}
+
+// ========== 上传 ==========
+var dropZone = document.getElementById('dropZone');
+var fileInput = document.getElementById('fileInput');
+dropZone.addEventListener('click', function() { fileInput.click(); });
+dropZone.addEventListener('dragover', function(e) { e.preventDefault(); dropZone.classList.add('over'); });
+dropZone.addEventListener('dragleave', function() { dropZone.classList.remove('over'); });
+dropZone.addEventListener('drop', function(e) { e.preventDefault(); dropZone.classList.remove('over'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', function(e) { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+async function handleFile(file) {
+  document.getElementById('fileName').textContent = file.name + ' (读取中...)';
+  var buf = await file.arrayBuffer();
+  srcWorkbook = new ExcelJS.Workbook();
+  await srcWorkbook.xlsx.load(buf);
+  sheetNames = [];
+  srcWorkbook.eachSheet(function(ws) { sheetNames.push(ws.name); });
+  document.getElementById('fileName').textContent = file.name;
+  showSheets();
+  loadAndRenderRules();
+}
+
+function showSheets() {
+  document.getElementById('sheetList').innerHTML = sheetNames.map(function(n) { return '<span class="tag">' + h(n) + '</span>'; }).join('');
+  document.getElementById('sheetCount').textContent = sheetNames.length + ' 个';
+  document.getElementById('sheetCard').classList.add('show');
+  document.getElementById('actionPanel').classList.add('show');
+}
+
+// ========== 规则管理 ==========
+function loadAndRenderRules() {
+  rules = []; ruleSeq = 0;
+  document.getElementById('rules').innerHTML = '';
+  getDefaults().forEach(function(r) { pushRule(r.sheets || [], r.tpl || '{date}_{sheet}', r.desc || ''); });
+  document.getElementById('ruleCard').classList.add('show');
+  document.getElementById('log').innerHTML = '';
+  updCount();
+}
+
+function pushRule(sheets, tpl, desc) {
+  var id = ++ruleSeq;
+  rules.push({ id: id, sheets: sheets.slice(), tpl: tpl, desc: desc });
+  renderOneRule(rules[rules.length - 1]);
+  updCount();
+}
+
+function addEmptyRule() { pushRule([], '{date}_{sheet}', '新规则'); }
+
+function resetRules() {
+  loadedDefaults = null;
+  jsonAvailable = false;
+  fetch('export-rules.json').then(function(r) {
+    if (!r.ok) throw new Error('');
+    return r.json();
+  }).then(function(data) {
+    if (Array.isArray(data) && data.length > 0) { loadedDefaults = data; jsonAvailable = true; }
+    updateSaveMode(); loadAndRenderRules();
+  }).catch(function() { updateSaveMode(); loadAndRenderRules(); });
+}
+
+function saveRules() {
+  var data = rules.map(function(r) { return { sheets: r.sheets, tpl: r.tpl, desc: r.desc }; });
+  var json = JSON.stringify(data, null, 2);
+  downloadBlob(new Blob([json], { type: 'application/json' }), 'export-rules.json');
+  showToast('已下载 export-rules.json，请替换同目录下的文件');
+}
+
+function importRulesFile() { document.getElementById('importInput').click(); }
+document.getElementById('importInput').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      var data = JSON.parse(ev.target.result);
+      if (Array.isArray(data)) {
+        loadedDefaults = data; jsonAvailable = true;
+        updateSaveMode(); loadAndRenderRules();
+        showToast('规则已导入');
+      }
+    } catch(err) { showToast('JSON 格式错误', true); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+function updCount() { document.getElementById('ruleCount').textContent = rules.length + ' 条'; }
+
+// ========== 规则渲染 ==========
+function renderOneRule(r) {
+  var el = document.createElement('div');
+  el.className = 'rule'; el.id = 'r-' + r.id;
+  var picks = sheetNames.map(function(s) {
+    var ck = r.sheets.indexOf(s) >= 0 ? 'checked' : '';
+    return '<label class="sheet-pick"><input type="checkbox" ' + ck + ' onchange="togSheet(' + r.id + ',this)" data-sn="' + h(s) + '"><span>' + h(s) + '</span></label>';
+  }).join('');
+  el.innerHTML = '<div class="rule-head" onclick="togRule(' + r.id + ')">'
+    + '<span class="rule-arrow">&#9654;</span>'
+    + '<input class="rule-name-input" value="' + h(r.desc || '规则 ' + r.id) + '" onclick="event.stopPropagation()" oninput="updDesc(' + r.id + ',this.value)">'
+    + '<span class="rule-pv" id="pvs-' + r.id + '"></span>'
+    + '<button class="rule-del" onclick="event.stopPropagation();delRule(' + r.id + ')">&times;</button>'
+    + '</div>'
+    + '<div class="rule-body">'
+    + '<div class="field"><div class="field-label">文件名模板</div>'
+    + '<input type="text" value="' + h(r.tpl) + '" oninput="updTpl(' + r.id + ',this.value)"></div>'
+    + '<div class="preview-full" id="pv-' + r.id + '"></div>'
+    + '<div class="field"><div class="field-label">包含的工作表</div><div class="sheet-picks">' + picks + '</div></div>'
+    + '</div>';
+  document.getElementById('rules').appendChild(el);
+  refreshPreview(r.id);
+}
+
+function togRule(id) { var el = document.getElementById('r-' + id); if (el) el.classList.toggle('open'); }
+function delRule(id) { rules = rules.filter(function(r) { return r.id !== id; }); var el = document.getElementById('r-' + id); if (el) el.remove(); updCount(); }
+function updDesc(id, val) { var r = rules.find(function(x) { return x.id === id; }); if (r) r.desc = val; }
+function updTpl(id, val) { var r = rules.find(function(x) { return x.id === id; }); if (r) { r.tpl = val; refreshPreview(id); } }
+
+function togSheet(id, cb) {
+  var r = rules.find(function(x) { return x.id === id; });
+  if (!r) return;
+  var sn = cb.dataset.sn;
+  if (cb.checked) { if (r.sheets.indexOf(sn) < 0) r.sheets.push(sn); }
+  else { r.sheets = r.sheets.filter(function(s) { return s !== sn; }); }
+  refreshPreview(id);
+}
+
+function refreshPreview(id) {
+  var r = rules.find(function(x) { return x.id === id; });
+  var full = document.getElementById('pv-' + id);
+  var short = document.getElementById('pvs-' + id);
+  if (!r) return;
+  var fn = r.sheets.length === 0 ? '（未选择工作表）' : resolveName(r) + '.xlsx';
+  var empty = r.sheets.length === 0;
+  if (full) { full.textContent = fn; full.style.color = empty ? '#ccc' : '#4a90d9'; }
+  if (short) { short.textContent = empty ? '' : fn; }
+}
+/* __EXPORT__ */
+
+// ========== 导出 ==========
+async function exportAll() {
+  if (!srcWorkbook) { showToast('请先上传文件', true); return; }
+  var btn = document.getElementById('exportBtn');
+  btn.disabled = true; btn.textContent = '导出中...';
+  var logEl = document.getElementById('log');
+  logEl.innerHTML = '';
+  var ok = 0, fail = 0;
+
+  for (var idx = 0; idx < rules.length; idx++) {
+    var r = rules[idx];
+    if (r.sheets.length === 0) { logItem(logEl, 'err', (r.desc || '规则' + (idx+1)) + '：未选工作表'); fail++; continue; }
+    var miss = r.sheets.filter(function(s) { return sheetNames.indexOf(s) < 0; });
+    if (miss.length) { logItem(logEl, 'err', (r.desc || '规则' + (idx+1)) + '：缺少 ' + miss.join(',')); fail++; continue; }
+    try {
+      var blob = await buildNewXlsx(r.sheets);
+      var fn = resolveName(r) + '.xlsx';
+      downloadBlob(blob, fn);
+      logItem(logEl, 'ok', fn); ok++;
+    } catch (e) {
+      logItem(logEl, 'err', (r.desc || '规则' + (idx+1)) + '：' + e.message); fail++;
+    }
+  }
+  btn.disabled = false; btn.textContent = '导出全部';
+  var parts = [];
+  if (ok) parts.push('成功 ' + ok);
+  if (fail) parts.push('失败 ' + fail);
+  if (parts.length) logEl.innerHTML += '<div class="log-done">' + parts.join('，') + '</div>';
+}
+
+async function buildNewXlsx(keepSheets) {
+  var newWb = new ExcelJS.Workbook();
+  if (newWb.definedNames) {
+    if (newWb.definedNames._matrixMap) newWb.definedNames._matrixMap = {};
+    if (newWb.definedNames.model) newWb.definedNames.model = [];
+  }
+
+  keepSheets.forEach(function(name) {
+    var srcWs = srcWorkbook.getWorksheet(name);
+    if (!srcWs) return;
+    var newWs = newWb.addWorksheet(name, {
+      properties: srcWs.properties,
+      pageSetup: srcWs.pageSetup,
+      views: srcWs.views
+    });
+
+    if (srcWs.columns) {
+      srcWs.columns.forEach(function(col, i) {
+        var nc = newWs.getColumn(i + 1);
+        if (col.width) nc.width = col.width;
+        if (col.style) nc.style = JSON.parse(JSON.stringify(col.style));
+        if (col.hidden) nc.hidden = col.hidden;
+      });
+    }
+
+    srcWs.eachRow({ includeEmpty: true }, function(srcRow, rowNum) {
+      var newRow = newWs.getRow(rowNum);
+      newRow.height = srcRow.height;
+      newRow.hidden = srcRow.hidden;
+      if (srcRow.outlineLevel) newRow.outlineLevel = srcRow.outlineLevel;
+      srcRow.eachCell({ includeEmpty: true }, function(srcCell, colNum) {
+        var newCell = newRow.getCell(colNum);
+        var t = srcCell.type;
+        if (t === ExcelJS.ValueType.Formula) {
+          var res = srcCell.result;
+          newCell.value = (res != null) ? res : (srcCell.value && srcCell.value.result != null ? srcCell.value.result : srcCell.text || '');
+        } else {
+          newCell.value = srcCell.value;
+        }
+        if (srcCell.style) newCell.style = JSON.parse(JSON.stringify(srcCell.style));
+      });
+      newRow.commit();
+    });
+
+    if (srcWs._merges) {
+      Object.keys(srcWs._merges).forEach(function(key) {
+        try { newWs.mergeCells(srcWs._merges[key]); } catch(e) {}
+      });
+    }
+  });
+
+  var buffer = await newWb.xlsx.writeBuffer();
+  return new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+
+function downloadBlob(blob, filename) {
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 100);
+}
+
+// ========== 文件名 ==========
+function resolveName(r) {
+  var s = r.tpl;
+  s = s.replace(/\{date\}/g, fmtDate());
+  s = s.replace(/\{sheet\}/g, r.sheets[0] || '未命名');
+  s = s.replace(/\{A1:(.+?)\}/g, function(_, sn) {
+    var ws = srcWorkbook && srcWorkbook.getWorksheet(sn);
+    if (ws) {
+      var cell = ws.getCell('A1');
+      if (cell) {
+        var v = cell.type === ExcelJS.ValueType.Formula ? cell.result : cell.value;
+        if (v != null) { var str = String(v).trim(); if (str) return str; }
+      }
+    }
+    return sn;
+  });
+  return sanitize(s);
+}
+
+function logItem(el, cls, text) {
+  el.innerHTML += '<div class="log-item log-' + cls + '">' + (cls === 'ok' ? '&#10003;' : '&#10007;') + ' ' + h(text) + '</div>';
+}
+
+function fmtDate() {
+  var d = new Date();
+  return '' + d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+}
+function sanitize(s) { return s.replace(/[\\/:*?"<>|]/g, '_').replace(/\.+$/, '').substring(0,120) || '未命名'; }
+function h(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function showToast(msg, isErr) {
+  var t = document.createElement('div');
+  t.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);padding:10px 24px;border-radius:8px;font-size:14px;font-weight:500;z-index:9999;box-shadow:0 2px 12px rgba(0,0,0,.12);transition:opacity .3s;'
+    + (isErr ? 'background:#fde8e8;color:#c62828' : 'background:#e8f5e9;color:#2e7d32');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function() { t.style.opacity = '0'; setTimeout(function() { t.remove(); }, 300); }, 2000);
+}
+</script>
+</body>
+</html>
