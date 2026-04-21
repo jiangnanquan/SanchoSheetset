@@ -7,7 +7,6 @@
     "devUrl": "http://localhost:1420"
   },
   "app": {
-    "title": "Excel 报表导出工具",
     "windows": [
       {
         "title": "Excel 报表导出工具",
@@ -23,7 +22,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": "all",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
