@@ -1,7 +1,7 @@
 {
   "name": "sancho-sheetset",
   "productName": "SanchoSheetset",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "SanchoSheetset desktop app for splitting Excel workbooks into clean standalone exports.",
   "main": "electron/main.js",
   "author": "甘泉",
@@ -14,10 +14,10 @@
   "homepage": "https://github.com/jiangnanquan/SanchoSheetset",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder",
-    "dist:mac": "electron-builder --mac dmg",
-    "dist:win": "electron-builder --win nsis",
-    "dist:dir": "electron-builder --dir"
+    "dist": "electron-builder --publish never",
+    "dist:mac": "electron-builder --mac dmg --publish never",
+    "dist:win": "electron-builder --win nsis --publish never",
+    "dist:dir": "electron-builder --dir --publish never"
   },
   "build": {
     "appId": "com.sancho.sheetset",
@@ -61,12 +61,7 @@
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true
-    },
-    "publish": [
-      {
-        "provider": "github"
-      }
-    ]
+    }
   },
   "devDependencies": {
     "electron": "^35.1.5",
