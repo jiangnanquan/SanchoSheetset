@@ -9,7 +9,9 @@ const DEFAULT_SESSION = {
   lastRulesPath: '',
   lastRulesName: '',
   lastRulesText: '',
-  lastExportDir: ''
+  lastExportDir: '',
+  activeRulePresetId: '',
+  rulePresets: []
 };
 
 function getSessionFilePath() {
@@ -20,7 +22,10 @@ async function readSession() {
   try {
     const text = await fs.readFile(getSessionFilePath(), 'utf8');
     const data = JSON.parse(text);
-    return { ...DEFAULT_SESSION, ...(data && typeof data === 'object' ? data : {}) };
+    const next = { ...DEFAULT_SESSION, ...(data && typeof data === 'object' ? data : {}) };
+    if (!Array.isArray(next.rulePresets)) next.rulePresets = [];
+    if (typeof next.activeRulePresetId !== 'string') next.activeRulePresetId = '';
+    return next;
   } catch (error) {
     return { ...DEFAULT_SESSION };
   }

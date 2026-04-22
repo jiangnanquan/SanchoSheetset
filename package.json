@@ -1,7 +1,7 @@
 {
   "name": "sancho-sheetset",
   "productName": "SanchoSheetset",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "SanchoSheetset desktop app for splitting Excel workbooks into clean standalone exports.",
   "main": "electron/main.js",
   "author": "甘泉",

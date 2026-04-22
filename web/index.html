@@ -5,132 +5,102 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SanchoSheetset - Excel 报表导出工具</title>
 <script>
-// 默认导出规则，用于“恢复默认”和首次启动。
-var DEFAULT_RULES = [
-  {
-    "sheets": [
-      "经营公司",
-      "其他公司",
-      "全部公司"
-    ],
-    "tpl": "{date}_{A1:全部公司}",
-    "desc": "日报合并"
-  },
-  {
-    "sheets": [
-      "用途统计表-三生主业及零售板块"
-    ],
-    "tpl": "{date}_{sheet}",
-    "desc": "用途统计-三生"
-  },
-  {
-    "sheets": [
-      "用途统计表-希诺赛板块"
-    ],
-    "tpl": "{date}_{sheet}",
-    "desc": "用途统计-希诺赛"
-  },
-  {
-    "sheets": [
-      "资金汇总表-三生主业及零售板块"
-    ],
-    "tpl": "{date}_{sheet}",
-    "desc": "资金汇总-三生"
-  },
-  {
-    "sheets": [
-      "资金汇总表-希诺赛板块"
-    ],
-    "tpl": "{date}_{sheet}",
-    "desc": "资金汇总-希诺赛"
-  }
-];
-
-// 优先本地 exceljs.min.js，没有则 CDN
-(function(){
-  var s = document.createElement('script');
-  s.src = 'exceljs.min.js';
-  s.onerror = function() {
-    var f = document.createElement('script');
-    f.src = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
-    document.head.appendChild(f);
+(function() {
+  var script = document.createElement('script');
+  script.src = 'exceljs.min.js';
+  script.onerror = function() {
+    var fallback = document.createElement('script');
+    fallback.src = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+    document.head.appendChild(fallback);
   };
-  document.head.appendChild(s);
+  document.head.appendChild(script);
 })();
 </script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
 body{font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:#f0f2f5;color:#333;height:100vh;overflow:hidden;display:flex;flex-direction:column}
-.wrap{max-width:1200px;margin:0 auto;padding:20px 20px 0;flex:1;width:100%;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.wrap{max-width:1240px;margin:0 auto;padding:20px 20px 0;flex:1;width:100%;display:flex;flex-direction:column;min-height:0;overflow:hidden}
 h1{font-size:20px;text-align:center;margin-bottom:2px}
-.subtitle{text-align:center;font-size:12px;color:#999;margin-bottom:16px}
+.subtitle{text-align:center;font-size:12px;color:#8a94a6;margin-bottom:16px}
 .cols{display:flex;gap:16px;align-items:stretch;flex:1;min-height:0}
 .col-left{flex:1;min-width:0;min-height:0;overflow:auto;padding-right:4px}
-.col-right{width:320px;flex-shrink:0;min-height:0;display:flex;flex-direction:column}
-.upload{border:2px dashed #c0c0c0;border-radius:10px;padding:28px 16px;text-align:center;cursor:pointer;transition:all .2s;background:#fff;margin-bottom:14px}
+.col-right{width:340px;flex-shrink:0;min-height:0;display:flex;flex-direction:column;gap:12px}
+.card,.panel{background:#fff;border-radius:12px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.card{display:none}
+.card.show{display:block}
+.panel{display:flex;flex-direction:column;min-height:0}
+.panel-compact{flex:0 0 auto}
+.panel-stretch{flex:1}
+.card-title,.panel-title{font-size:14px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.badge{background:#e8f0fe;color:#4a90d9;font-size:11px;padding:1px 7px;border-radius:8px;font-weight:400}
+.upload{border:2px dashed #c8ced8;border-radius:10px;padding:18px 14px;text-align:center;cursor:pointer;transition:all .18s;background:#fbfcfe}
 .upload:hover,.upload.over{border-color:#4a90d9;background:#f0f6ff}
 .upload input{display:none}
-.upload-icon{font-size:28px;margin-bottom:4px;color:#bbb}
-.upload-text{font-size:14px;color:#666}
-.upload-hint{font-size:11px;color:#aaa;margin-top:4px}
-.upload-file{margin-top:6px;font-size:13px;color:#4a90d9;font-weight:600;word-break:break-all}
-.card{background:#fff;border-radius:10px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.05);display:none}
-.card.show{display:block}
-.card-title{font-size:14px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px}
-.badge{background:#e8f0fe;color:#4a90d9;font-size:11px;padding:1px 7px;border-radius:8px;font-weight:400}
+.upload-icon{font-size:26px;margin-bottom:4px;color:#b3bcc9}
+.upload-text{font-size:14px;color:#4b5563}
+.upload-hint{font-size:11px;color:#97a0af;margin-top:4px}
+.upload-file{margin-top:8px;font-size:12px;color:#4a90d9;font-weight:600;word-break:break-all}
+.meta{font-size:11px;color:#667085;line-height:1.7;background:#f8fafc;border:1px solid #edf2f7;border-radius:8px;padding:10px 12px;word-break:break-all}
+.meta strong{color:#445064}
 .sheet-summary{font-size:12px;color:#6b7280;margin-bottom:8px}
 .tags{display:flex;flex-wrap:wrap;gap:4px}
 .tag{background:#f0f4f8;padding:3px 9px;border-radius:5px;font-size:12px;color:#555}
+.field{margin-bottom:10px}
+.field:last-child{margin-bottom:0}
+.field-label{font-size:11px;color:#98a2b3;margin-bottom:4px}
+.field input[type=text]{width:100%;padding:8px 10px;border:1px solid #d8dde6;border-radius:7px;font-size:12px;background:#fff}
+.field input[type=text]:focus{outline:none;border-color:#4a90d9}
+.btn{padding:8px 14px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;transition:all .12s;width:100%;text-align:center}
+.btn + .btn{margin-top:6px}
+.btn-row{display:flex;gap:8px;margin-bottom:8px}
+.btn-row .btn{margin-top:0;flex:1}
+.btn-main{background:#4a90d9;color:#fff}.btn-main:hover{background:#3b7fc4}
+.btn-sub{background:#eef2f6;color:#4b5563}.btn-sub:hover{background:#e3e8ee}
+.btn-save{background:#fff;color:#4a90d9;border:1.5px solid #4a90d9}.btn-save:hover{background:#f0f6ff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.preset-list{margin-top:10px;display:flex;flex-direction:column;gap:6px;max-height:200px;overflow:auto}
+.preset-item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;padding:10px 11px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;cursor:pointer;transition:all .12s}
+.preset-item:hover{border-color:#c6d6eb;background:#f8fbff}
+.preset-item.active{border-color:#4a90d9;background:#edf4ff}
+.preset-item-name{font-size:12px;font-weight:600;color:#334155}
+.preset-item-meta{font-size:11px;color:#7b8794}
 .rule{border:1px solid #e8e8e8;border-radius:8px;margin-bottom:8px;overflow:hidden;transition:box-shadow .15s}
 .rule:hover{box-shadow:0 1px 6px rgba(0,0,0,.05)}
 .rule-head{display:flex;align-items:center;padding:8px 12px;cursor:pointer;gap:6px;user-select:none;background:#fafbfc}
 .rule-head:hover{background:#f0f4f8}
-.rule-arrow{font-size:10px;color:#aaa;transition:transform .2s;flex-shrink:0;width:14px;text-align:center}
+.rule-arrow{font-size:10px;color:#9aa4b2;transition:transform .2s;flex-shrink:0;width:14px;text-align:center}
 .rule.open .rule-arrow{transform:rotate(90deg)}
 .rule-name-input{flex:1;font-size:13px;font-weight:600;color:#333;border:none;background:transparent;outline:none;padding:0;min-width:0}
 .rule-name-input:focus{border-bottom:1.5px solid #4a90d9}
 .rule-pv{font-size:11px;color:#4a90d9;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0}
-.rule-del{background:none;border:none;color:#ddd;cursor:pointer;font-size:16px;line-height:1;flex-shrink:0;padding:0 2px}
+.rule-del{background:none;border:none;color:#d0d5dd;cursor:pointer;font-size:16px;line-height:1;flex-shrink:0;padding:0 2px}
 .rule-del:hover{color:#e53935}
 .rule-body{display:none;padding:10px 12px 12px;border-top:1px solid #f0f0f0}
 .rule.open .rule-body{display:block}
-.field{margin-bottom:8px}
-.field-label{font-size:11px;color:#999;margin-bottom:3px}
-.field input[type=text]{width:100%;padding:5px 8px;border:1px solid #ddd;border-radius:5px;font-size:12px}
-.field input[type=text]:focus{outline:none;border-color:#4a90d9}
 .preview-full{background:#f8fafb;border:1px solid #e8eff5;border-radius:5px;padding:6px 10px;font-size:12px;color:#4a90d9;font-weight:500;margin-bottom:8px;word-break:break-all}
 .sheet-picks{display:flex;flex-wrap:wrap;gap:4px}
 .sheet-pick{position:relative;cursor:pointer}
 .sheet-pick input{position:absolute;opacity:0;width:0;height:0}
 .sheet-pick span{display:inline-block;padding:3px 8px;border-radius:4px;font-size:11px;background:#f0f0f0;color:#666;border:1.5px solid transparent;transition:all .12s;user-select:none}
 .sheet-pick input:checked+span{background:#e8f0fe;color:#2b6cb0;border-color:#4a90d9}
-.panel{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.05);display:none;min-height:0;height:100%;overflow:hidden}
-.panel.show{display:flex;flex-direction:column}
-.panel-title{font-size:14px;font-weight:600;margin-bottom:10px}
-.btn{padding:8px 18px;border:none;border-radius:7px;cursor:pointer;font-size:13px;font-weight:500;transition:all .12s;width:100%;margin-bottom:6px;text-align:center}
-.btn-main{background:#4a90d9;color:#fff}.btn-main:hover{background:#3b7fc4}
-.btn-sub{background:#f0f0f0;color:#555}.btn-sub:hover{background:#e4e4e4}
-.btn-save{background:#fff;color:#4a90d9;border:1.5px solid #4a90d9}.btn-save:hover{background:#f0f6ff}
-.btn:disabled{opacity:.5;cursor:not-allowed}
-.meta{font-size:11px;color:#7b8794;line-height:1.6;background:#f8fafc;border:1px solid #edf2f7;border-radius:8px;padding:10px 12px;margin-bottom:10px;word-break:break-all}
-.meta strong{color:#4b5563}
+.empty-state{border:1px dashed #d5dbe4;border-radius:10px;padding:18px 14px;font-size:12px;line-height:1.7;color:#7b8794;background:#fbfcfe}
 .log{font-size:12px;margin-top:10px;padding-top:10px;border-top:1px solid #eef1f4;overflow:auto;min-height:0;flex:1}
 .log-item{padding:3px 0;display:flex;align-items:center;gap:4px}
 .log-ok{color:#2e7d32}.log-err{color:#d32f2f}
 .log-done{margin-top:6px;font-weight:600;color:#333;font-size:13px}
-.tpl-help{font-size:11px;color:#aaa;line-height:1.6;margin-top:8px}
+.tpl-help{font-size:11px;color:#8a94a6;line-height:1.7;margin-top:10px}
 .tpl-help code{background:#f0f0f0;padding:1px 4px;border-radius:3px;font-size:10px}
-.footer{text-align:center;padding:14px;font-size:12px;color:#bbb;border-top:1px solid #eee;background:#fff;flex-shrink:0}
+.footer{text-align:center;padding:14px;font-size:12px;color:#b3b8c3;border-top:1px solid #eee;background:#fff;flex-shrink:0}
 .footer .author{color:#999;font-size:12px}
-@media(max-width:800px){
+@media(max-width:900px){
   body{height:auto;overflow:auto}
   .wrap{overflow:visible}
   .cols{flex-direction:column}
   .col-left{overflow:visible;padding-right:0}
   .col-right{width:100%}
-  .panel{height:auto}
-  .log{flex:none;max-height:200px}
+  .panel-stretch{min-height:260px}
+  .log{max-height:220px}
 }
 </style>
 </head>
@@ -138,13 +108,6 @@ h1{font-size:20px;text-align:center;margin-bottom:2px}
 <div class="wrap">
   <h1>SanchoSheetset</h1>
   <p class="subtitle">上传 Excel，按规则拆分导出干净 xlsx（保留格式，无宏无连接）</p>
-  <div class="upload" id="dropZone">
-    <div class="upload-icon">&#128196;</div>
-    <div class="upload-text">点击选择文件，或拖拽到这里</div>
-    <div class="upload-hint">支持 .xlsx / .xlsm / .xls</div>
-    <div class="upload-file" id="fileName"></div>
-    <input type="file" id="fileInput" accept=".xlsx,.xlsm,.xls">
-  </div>
   <div class="cols">
     <div class="col-left">
       <div class="card" id="sheetCard">
@@ -152,24 +115,48 @@ h1{font-size:20px;text-align:center;margin-bottom:2px}
         <div class="sheet-summary" id="sheetSummary"></div>
         <div class="tags" id="sheetList"></div>
       </div>
-      <div class="card" id="ruleCard">
+      <div class="card show" id="ruleCard">
         <div class="card-title">导出规则 <span class="badge" id="ruleCount"></span></div>
         <div id="rules"></div>
       </div>
     </div>
     <div class="col-right">
-      <div class="panel" id="actionPanel">
+      <div class="panel panel-compact show" id="filePanel">
+        <div class="panel-title">Excel 文件</div>
+        <div class="upload" id="dropZone">
+          <div class="upload-icon">&#128196;</div>
+          <div class="upload-text">点击选择 Excel，或拖拽到这里</div>
+          <div class="upload-hint">支持 .xlsx / .xlsm / .xls</div>
+          <div class="upload-file" id="fileName"></div>
+          <input type="file" id="fileInput" accept=".xlsx,.xlsm,.xls">
+        </div>
+        <div class="meta" id="fileMeta"></div>
+      </div>
+      <div class="panel panel-compact show" id="presetPanel">
+        <div class="panel-title">规则预设</div>
+        <div class="field">
+          <div class="field-label">当前预设名称</div>
+          <input type="text" id="presetNameInput" placeholder="yyyyMMdd_中文描述">
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-sub" type="button" onclick="createNewPreset()">新建预设</button>
+          <button class="btn btn-sub" id="importRulesBtn" type="button" onclick="importRulesFile()">导入 JSON</button>
+        </div>
+        <button class="btn btn-save" id="saveRulesBtn" type="button" onclick="saveRules()">导出当前预设 JSON</button>
+        <div class="meta" id="presetMeta"></div>
+        <div class="preset-list" id="presetList"></div>
+      </div>
+      <div class="panel panel-stretch show" id="actionPanel">
         <div class="panel-title">操作</div>
-        <button class="btn btn-main" id="exportBtn" onclick="exportAll()">导出全部</button>
-        <button class="btn btn-sub" id="exportDirBtn" onclick="pickExportDirectory(true)">设置导出文件夹</button>
-        <button class="btn btn-save" id="saveRulesBtn" onclick="saveRules()">保存规则</button>
-        <button class="btn btn-sub" onclick="addEmptyRule()">+ 添加规则</button>
-        <button class="btn btn-sub" onclick="resetRules()">恢复默认</button>
-        <button class="btn btn-sub" id="importRulesBtn" onclick="importRulesFile()">导入规则 JSON</button>
-        <div class="meta" id="saveMode"></div>
+        <button class="btn btn-main" id="exportBtn" type="button" onclick="exportAll()">导出全部</button>
+        <button class="btn btn-sub" id="exportDirBtn" type="button" onclick="pickExportDirectory(true)">设置导出文件夹</button>
+        <button class="btn btn-sub" type="button" onclick="addEmptyRule()">+ 添加规则</button>
+        <button class="btn btn-sub" type="button" onclick="clearRules()">清空当前预设规则</button>
+        <div class="meta" id="actionMeta"></div>
         <div class="tpl-help">
-          <div style="font-size:11px;color:#999;margin-bottom:4px">文件名变量</div>
+          <div style="font-size:11px;color:#98a2b3;margin-bottom:4px">文件名变量</div>
           <code>{date}</code> 今日 yyyymmdd<br>
+          <code>{date+1}</code> 明天，<code>{date-1}</code> 昨天<br>
           <code>{sheet}</code> 首个工作表名<br>
           <code>{A1:表名}</code> 指定表的 A1 值
         </div>
@@ -185,41 +172,87 @@ var srcWorkbook = null;
 var sheetNames = [];
 var rules = [];
 var ruleSeq = 0;
-var IS_DESKTOP_APP = !!(window.sanchoDesktop && window.sanchoDesktop.isDesktop);
-var RULES_JSON_SUFFIX = '-导出规则.json';
+var rulePresets = [];
+var activeRulePresetId = '';
 var currentWorkbookName = '';
-var currentRuleDefaults = normalizeRules(DEFAULT_RULES) || [];
-var currentRulesSource = currentRuleDefaults.length ? '默认规则' : '未设置默认规则';
 var currentExportDir = null;
+var currentRulesSource = '当前没有规则';
 var ruleDraftTimer = null;
+var IS_DESKTOP_APP = !!(window.sanchoDesktop && window.sanchoDesktop.isDesktop);
+var RULES_JSON_SUFFIX = '.json';
+var MAX_RULE_PRESETS = 20;
+var PRESET_FALLBACK_NAME = '规则预设';
 
-(async function() {
+(async function init() {
   adaptUiForRuntime();
-  document.getElementById('actionPanel').classList.add('show');
+  bindUi();
+  updateFileMeta();
+  updatePresetMeta();
+  updateActionMeta();
   if (IS_DESKTOP_APP && window.sanchoDesktop && window.sanchoDesktop.getSession) {
     await restoreSession();
   }
-  if (!rules.length) loadAndRenderRules(currentRuleDefaults);
-  updateSaveMode();
+  ensureActivePreset(true, { skipPersist: true });
+  if (getActivePreset()) {
+    selectPreset(activeRulePresetId, { skipPersist: true, silent: true });
+  } else {
+    loadAndRenderRules([], { skipPersist: true });
+    renderPresetList();
+  }
 })();
 
 function adaptUiForRuntime() {
   if (IS_DESKTOP_APP) {
-    document.getElementById('saveRulesBtn').textContent = '保存规则 JSON';
-    document.getElementById('importRulesBtn').textContent = '导入规则 JSON';
+    document.getElementById('importRulesBtn').textContent = '导入 JSON';
+    document.getElementById('saveRulesBtn').textContent = '导出当前预设 JSON';
   }
 }
 
-function updateSaveMode() {
-  var exportText = currentExportDir && currentExportDir.path ? currentExportDir.path : '未设置';
-  document.getElementById('saveMode').innerHTML =
-    '<div><strong>规则来源：</strong>' + h(currentRulesSource) + '</div>'
-    + '<div><strong>当前 Excel：</strong>' + h(currentWorkbookName || '未选择') + '</div>'
-    + '<div><strong>导出文件夹：</strong>' + h(exportText) + '</div>';
-}
+function bindUi() {
+  var dropZone = document.getElementById('dropZone');
+  var fileInput = document.getElementById('fileInput');
+  var presetInput = document.getElementById('presetNameInput');
+  var presetList = document.getElementById('presetList');
+  var importInput = document.getElementById('importInput');
 
-function getDefaults() {
-  return currentRuleDefaults || [];
+  dropZone.addEventListener('click', function() {
+    if (IS_DESKTOP_APP && window.sanchoDesktop && window.sanchoDesktop.openExcelFile) {
+      openExcelFromDesktop();
+      return;
+    }
+    fileInput.click();
+  });
+  dropZone.addEventListener('dragover', function(e) { e.preventDefault(); dropZone.classList.add('over'); });
+  dropZone.addEventListener('dragleave', function() { dropZone.classList.remove('over'); });
+  dropZone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dropZone.classList.remove('over');
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', function(e) {
+    if (e.target.files[0]) handleFile(e.target.files[0]);
+  });
+
+  presetInput.addEventListener('input', function(e) {
+    renameActivePreset(e.target.value);
+  });
+
+  presetList.addEventListener('click', function(e) {
+    var item = e.target.closest('[data-preset-id]');
+    if (!item) return;
+    selectPreset(item.dataset.presetId);
+  });
+
+  importInput.addEventListener('change', function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    file.text().then(function(text) {
+      importRulesText(text, file.name);
+    }).catch(function() {
+      showToast('读取规则失败', true);
+    });
+    e.target.value = '';
+  });
 }
 
 async function restoreSession() {
@@ -227,16 +260,7 @@ async function restoreSession() {
     var session = await window.sanchoDesktop.getSession();
     if (!session) return;
 
-    if (session.rulesText) {
-      var restoredRules = tryParseRules(session.rulesText);
-      if (restoredRules) {
-        currentRuleDefaults = restoredRules;
-        currentRulesSource = session.lastRulesName
-          ? ('已恢复上次规则：' + session.lastRulesName)
-          : '已恢复上次规则草稿';
-        loadAndRenderRules(currentRuleDefaults, { skipPersist: true });
-      }
-    }
+    restorePresetsFromSession(session);
 
     if (session.lastExportDir) {
       currentExportDir = {
@@ -244,8 +268,6 @@ async function restoreSession() {
         name: basename(session.lastExportDir)
       };
     }
-
-    updateSaveMode();
 
     if (session.excelData) {
       var bytes = session.excelData instanceof Uint8Array ? session.excelData : new Uint8Array(session.excelData);
@@ -261,52 +283,30 @@ async function restoreSession() {
         logItem(document.getElementById('log'), 'err', message);
       });
     }
-  } catch (err) {
+  } catch (error) {
     logItem(document.getElementById('log'), 'err', '恢复上次工作状态失败');
   }
 }
 
-function persistRuleDraft(options) {
-  if (!IS_DESKTOP_APP || !window.sanchoDesktop || !window.sanchoDesktop.setSession) return;
-  clearTimeout(ruleDraftTimer);
-  ruleDraftTimer = setTimeout(function() {
-    window.sanchoDesktop.setSession({
-      lastRulesText: JSON.stringify(exportRulesData(), null, 2),
-      lastRulesName: options && options.name ? options.name : buildRulesJsonFilename()
-    }).catch(function() {});
-  }, 120);
-}
-
-function tryParseRules(text) {
-  try {
-    return normalizeRules(JSON.parse(text));
-  } catch (err) {
-    return null;
+function restorePresetsFromSession(session) {
+  var restored = normalizePresetList(session.rulePresets);
+  var migrated = tryParseRules(session.rulesText || session.lastRulesText || '');
+  if (!restored.length && migrated) {
+    restored = [
+      buildPreset({
+        name: buildPresetName(extractRulesLabel(migrated) || stemFromFilename(session.lastRulesName) || PRESET_FALLBACK_NAME),
+        rules: migrated
+      })
+    ];
   }
+  rulePresets = restored;
+  activeRulePresetId = findPreset(session.activeRulePresetId) ? session.activeRulePresetId : (rulePresets[0] ? rulePresets[0].id : '');
+  compactRulePresets();
 }
 
-function basename(filePath) {
-  return (filePath || '').split(/[\\/]/).pop();
-}
-
-// ========== 上传 ==========
-var dropZone = document.getElementById('dropZone');
-var fileInput = document.getElementById('fileInput');
-dropZone.addEventListener('click', function() {
-  if (IS_DESKTOP_APP && window.sanchoDesktop && window.sanchoDesktop.openExcelFile) {
-    openExcelFromDesktop();
-    return;
-  }
-  fileInput.click();
-});
-dropZone.addEventListener('dragover', function(e) { e.preventDefault(); dropZone.classList.add('over'); });
-dropZone.addEventListener('dragleave', function() { dropZone.classList.remove('over'); });
-dropZone.addEventListener('drop', function(e) { e.preventDefault(); dropZone.classList.remove('over'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
-fileInput.addEventListener('change', function(e) { if (e.target.files[0]) handleFile(e.target.files[0]); });
-
-async function handleFile(file) {
+function handleFile(file) {
   document.getElementById('fileName').textContent = file.name + ' (读取中...)';
-  await loadWorkbookFromBuffer(await file.arrayBuffer(), file.name, { path: file.path || '' });
+  return loadWorkbookFromBuffer(file.arrayBuffer ? file.arrayBuffer() : Promise.resolve(file), file.name, { path: file.path || '' });
 }
 
 async function openExcelFromDesktop() {
@@ -323,95 +323,164 @@ async function openExcelFromDesktop() {
       result.name,
       { path: result.path, skipPersist: true }
     );
-  } catch (err) {
+  } catch (error) {
     document.getElementById('fileName').textContent = currentWorkbookName || '';
     showToast('读取 Excel 失败', true);
   }
 }
 
-async function loadWorkbookFromBuffer(buf, fileName, options) {
+async function loadWorkbookFromBuffer(bufferOrPromise, fileName, options) {
+  var buf = await bufferOrPromise;
   srcWorkbook = new ExcelJS.Workbook();
   await srcWorkbook.xlsx.load(buf);
   sheetNames = [];
   srcWorkbook.eachSheet(function(ws) { sheetNames.push(ws.name); });
   currentWorkbookName = fileName || currentWorkbookName;
-  if (!options || !options.skipPersist) {
-    if (IS_DESKTOP_APP && window.sanchoDesktop && window.sanchoDesktop.setSession && options && options.path) {
-      window.sanchoDesktop.setSession({
-        lastExcelPath: options.path,
-        lastExcelName: fileName || basename(options.path)
-      }).catch(function() {});
-    }
+  if ((!options || !options.skipPersist) && IS_DESKTOP_APP && window.sanchoDesktop && window.sanchoDesktop.setSession && options && options.path) {
+    window.sanchoDesktop.setSession({
+      lastExcelPath: options.path,
+      lastExcelName: fileName || basename(options.path)
+    }).catch(function() {});
   }
   document.getElementById('fileName').textContent = currentWorkbookName;
   showSheets();
-  loadAndRenderRules(rules.length ? exportRulesData() : getDefaults(), { skipPersist: true });
+  updateFileMeta();
+  var active = getActivePreset();
+  loadAndRenderRules(active ? active.rules : [], { skipPersist: true });
 }
 
 function showSheets() {
-  document.getElementById('sheetList').innerHTML = sheetNames.map(function(n) { return '<span class="tag">' + h(n) + '</span>'; }).join('');
+  document.getElementById('sheetList').innerHTML = sheetNames.map(function(name) {
+    return '<span class="tag">' + h(name) + '</span>';
+  }).join('');
   document.getElementById('sheetCount').textContent = sheetNames.length + ' 个';
-  document.getElementById('sheetSummary').textContent = sheetNames.length ? '当前文件共 ' + sheetNames.length + ' 个工作表，明细如下。' : '当前文件没有可用工作表。';
+  document.getElementById('sheetSummary').textContent = sheetNames.length
+    ? ('当前文件共 ' + sheetNames.length + ' 个工作表，明细如下。')
+    : '当前文件没有可用工作表。';
   document.getElementById('sheetCard').classList.add('show');
-  document.getElementById('actionPanel').classList.add('show');
-  updateSaveMode();
 }
 
-// ========== 规则管理 ==========
+function ensureActivePreset(forceCreate, options) {
+  if (!findPreset(activeRulePresetId) && rulePresets.length) {
+    activeRulePresetId = rulePresets[0].id;
+  }
+  if (!rulePresets.length && forceCreate) {
+    var preset = buildPreset({ name: buildPresetName(PRESET_FALLBACK_NAME), rules: [] });
+    rulePresets = [preset];
+    activeRulePresetId = preset.id;
+    if (!options || !options.skipPersist) queueSessionPersist();
+  }
+  return getActivePreset();
+}
+
+function createNewPreset() {
+  var preset = buildPreset({ name: buildPresetName(PRESET_FALLBACK_NAME), rules: [] });
+  rulePresets.unshift(preset);
+  activeRulePresetId = preset.id;
+  compactRulePresets();
+  selectPreset(preset.id, { skipPersist: true, silent: true });
+  currentRulesSource = '已新建规则预设';
+  updateActionMeta();
+  queueSessionPersist();
+  showToast('已新建预设：' + preset.name);
+}
+
+function selectPreset(id, options) {
+  var preset = findPreset(id);
+  if (!preset) return;
+  activeRulePresetId = preset.id;
+  currentRulesSource = '规则预设：' + preset.name;
+  document.getElementById('presetNameInput').value = preset.name;
+  loadAndRenderRules(preset.rules, { skipPersist: true });
+  renderPresetList();
+  updatePresetMeta();
+  updateActionMeta();
+  if (!options || !options.skipPersist) queueSessionPersist();
+  if (!options || !options.silent) showToast('已切换到预设：' + preset.name);
+}
+
+function renameActivePreset(value) {
+  var preset = ensureActivePreset(true, { skipPersist: true });
+  if (!preset) return;
+  preset.name = cleanPresetName(value);
+  preset.updatedAt = new Date().toISOString();
+  compactRulePresets();
+  currentRulesSource = '规则预设：' + preset.name;
+  renderPresetList();
+  updatePresetMeta();
+  updateActionMeta();
+  queueSessionPersist();
+}
+
 function loadAndRenderRules(seedRules, options) {
-  rules = []; ruleSeq = 0;
-  document.getElementById('rules').innerHTML = '';
-  (normalizeRules(seedRules || getDefaults()) || []).forEach(function(r) { pushRule(r.sheets || [], r.tpl || '{date}_{sheet}', r.desc || ''); });
-  document.getElementById('ruleCard').classList.add('show');
+  rules = [];
+  ruleSeq = 0;
+  var el = document.getElementById('rules');
+  el.innerHTML = '';
+  (normalizeRules(seedRules) || []).forEach(function(rule) {
+    pushRule(rule.sheets || [], rule.tpl || '{date}_{sheet}', rule.desc || '');
+  });
+  if (!rules.length) {
+    el.innerHTML = '<div class="empty-state">当前预设还没有规则。你可以点击右侧“新建预设”或“+ 添加规则”开始配置。</div>';
+  }
   document.getElementById('log').innerHTML = '';
   updCount();
-  if (!options || !options.skipPersist) persistRuleDraft();
+  if (!options || !options.skipPersist) {
+    syncCurrentRulesToActivePreset();
+    queueSessionPersist();
+  }
 }
 
 function pushRule(sheets, tpl, desc) {
+  var container = document.getElementById('rules');
+  if (container.querySelector('.empty-state')) container.innerHTML = '';
   var id = ++ruleSeq;
-  rules.push({ id: id, sheets: sheets.slice(), tpl: tpl, desc: desc });
+  rules.push({
+    id: id,
+    sheets: sheets.slice(),
+    tpl: tpl,
+    desc: desc
+  });
   renderOneRule(rules[rules.length - 1]);
   updCount();
 }
 
 function addEmptyRule() {
   pushRule([], '{date}_{sheet}', '新规则');
-  persistRuleDraft();
+  syncCurrentRulesToActivePreset();
+  queueSessionPersist();
 }
 
-function resetRules() {
-  currentRuleDefaults = normalizeRules(DEFAULT_RULES) || [];
-  currentRulesSource = currentRuleDefaults.length ? '默认规则' : '未设置默认规则';
-  updateSaveMode();
-  loadAndRenderRules(currentRuleDefaults);
-  showToast('已恢复默认规则');
+function clearRules() {
+  loadAndRenderRules([]);
+  currentRulesSource = '已清空当前预设规则';
+  updateActionMeta();
+  showToast('已清空当前预设规则');
 }
 
 async function saveRules() {
   var data = exportRulesData();
+  var filename = buildRulesJsonFilename();
   if (IS_DESKTOP_APP && window.sanchoDesktop && window.sanchoDesktop.saveRulesJson) {
     try {
       var result = await window.sanchoDesktop.saveRulesJson({
-        defaultName: buildRulesJsonFilename(),
+        defaultName: filename,
         text: JSON.stringify(data, null, 2)
       });
       if (!result || result.canceled) return;
-      currentRuleDefaults = normalizeRules(data) || [];
-      currentRulesSource = '已保存到规则文件：' + result.name;
-      updateSaveMode();
+      currentRulesSource = '已导出 JSON：' + result.name;
+      updateActionMeta();
       showToast('已保存 ' + result.name);
+      queueSessionPersist();
       return;
-    } catch (err) {
+    } catch (error) {
       showToast('保存规则失败', true);
       return;
     }
   }
-  var filename = buildRulesJsonFilename();
   downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' }), filename);
-  currentRuleDefaults = normalizeRules(data) || [];
-  currentRulesSource = '已导出规则文件：' + filename;
-  updateSaveMode();
+  currentRulesSource = '已导出 JSON：' + filename;
+  updateActionMeta();
   showToast('已导出 ' + filename);
 }
 
@@ -421,117 +490,306 @@ async function importRulesFile() {
       var result = await window.sanchoDesktop.openRulesJson();
       if (!result || result.canceled || !result.text) return;
       importRulesText(result.text, result.name);
-    } catch (err) {
+    } catch (error) {
       showToast('读取规则失败', true);
     }
     return;
   }
   document.getElementById('importInput').click();
 }
-document.getElementById('importInput').addEventListener('change', function(e) {
-  var file = e.target.files[0];
-  if (!file) return;
-  file.text().then(function(text) {
-    return importRulesText(text, file.name);
-  }).catch(function() {
-    showToast('读取规则失败', true);
-  });
-  e.target.value = '';
-});
 
-function updCount() { document.getElementById('ruleCount').textContent = rules.length + ' 条'; }
+function importRulesText(text, fileName) {
+  var importedRules = tryParseRules(text);
+  if (!importedRules) {
+    showToast('JSON 格式错误', true);
+    return;
+  }
+  var targetName = buildPresetName(extractRulesLabel(importedRules) || stemFromFilename(fileName) || '导入规则');
+  var active = getActivePreset();
+  if (active && isPresetBlank(active) && rulePresets.length === 1) {
+    active.name = targetName;
+    active.rules = importedRules;
+    active.updatedAt = new Date().toISOString();
+    selectPreset(active.id, { skipPersist: true, silent: true });
+  } else {
+    var preset = buildPreset({ name: targetName, rules: importedRules });
+    rulePresets.unshift(preset);
+    activeRulePresetId = preset.id;
+    compactRulePresets();
+    selectPreset(preset.id, { skipPersist: true, silent: true });
+  }
+  currentRulesSource = fileName ? ('导入 JSON：' + fileName) : '导入 JSON';
+  updateActionMeta();
+  queueSessionPersist();
+  showToast(fileName ? ('规则已导入：' + fileName) : '规则已导入');
+}
 
-// ========== 规则渲染 ==========
-function renderOneRule(r) {
+function renderOneRule(rule) {
   var el = document.createElement('div');
-  el.className = 'rule'; el.id = 'r-' + r.id;
-  var picks = sheetNames.map(function(s) {
-    var ck = r.sheets.indexOf(s) >= 0 ? 'checked' : '';
-    return '<label class="sheet-pick"><input type="checkbox" ' + ck + ' onchange="togSheet(' + r.id + ',this)" data-sn="' + h(s) + '"><span>' + h(s) + '</span></label>';
+  var picks = sheetNames.map(function(name) {
+    var checked = rule.sheets.indexOf(name) >= 0 ? 'checked' : '';
+    return '<label class="sheet-pick"><input type="checkbox" ' + checked + ' onchange="togSheet(' + rule.id + ',this)" data-sn="' + h(name) + '"><span>' + h(name) + '</span></label>';
   }).join('');
-  el.innerHTML = '<div class="rule-head" onclick="togRule(' + r.id + ')">'
+  el.className = 'rule';
+  el.id = 'r-' + rule.id;
+  el.innerHTML = '<div class="rule-head" onclick="togRule(' + rule.id + ')">'
     + '<span class="rule-arrow">&#9654;</span>'
-    + '<input class="rule-name-input" value="' + h(r.desc || '规则 ' + r.id) + '" onclick="event.stopPropagation()" oninput="updDesc(' + r.id + ',this.value)">'
-    + '<span class="rule-pv" id="pvs-' + r.id + '"></span>'
-    + '<button class="rule-del" onclick="event.stopPropagation();delRule(' + r.id + ')">&times;</button>'
+    + '<input class="rule-name-input" value="' + h(rule.desc || ('规则 ' + rule.id)) + '" onclick="event.stopPropagation()" oninput="updDesc(' + rule.id + ',this.value)">'
+    + '<span class="rule-pv" id="pvs-' + rule.id + '"></span>'
+    + '<button class="rule-del" type="button" onclick="event.stopPropagation();delRule(' + rule.id + ')">&times;</button>'
     + '</div>'
     + '<div class="rule-body">'
-    + '<div class="field"><div class="field-label">文件名模板</div>'
-    + '<input type="text" value="' + h(r.tpl) + '" oninput="updTpl(' + r.id + ',this.value)"></div>'
-    + '<div class="preview-full" id="pv-' + r.id + '"></div>'
+    + '<div class="field"><div class="field-label">文件名模板</div><input type="text" value="' + h(rule.tpl) + '" oninput="updTpl(' + rule.id + ',this.value)"></div>'
+    + '<div class="preview-full" id="pv-' + rule.id + '"></div>'
     + '<div class="field"><div class="field-label">包含的工作表</div><div class="sheet-picks">' + picks + '</div></div>'
     + '</div>';
   document.getElementById('rules').appendChild(el);
-  refreshPreview(r.id);
+  refreshPreview(rule.id);
 }
 
-function togRule(id) { var el = document.getElementById('r-' + id); if (el) el.classList.toggle('open'); }
-function delRule(id) { rules = rules.filter(function(r) { return r.id !== id; }); var el = document.getElementById('r-' + id); if (el) el.remove(); updCount(); persistRuleDraft(); }
-function updDesc(id, val) { var r = rules.find(function(x) { return x.id === id; }); if (r) { r.desc = val; persistRuleDraft(); } }
-function updTpl(id, val) { var r = rules.find(function(x) { return x.id === id; }); if (r) { r.tpl = val; refreshPreview(id); persistRuleDraft(); } }
+function togRule(id) {
+  var el = document.getElementById('r-' + id);
+  if (el) el.classList.toggle('open');
+}
 
-function togSheet(id, cb) {
-  var r = rules.find(function(x) { return x.id === id; });
-  if (!r) return;
-  var sn = cb.dataset.sn;
-  if (cb.checked) { if (r.sheets.indexOf(sn) < 0) r.sheets.push(sn); }
-  else { r.sheets = r.sheets.filter(function(s) { return s !== sn; }); }
+function delRule(id) {
+  rules = rules.filter(function(rule) { return rule.id !== id; });
+  var el = document.getElementById('r-' + id);
+  if (el) el.remove();
+  if (!rules.length) {
+    document.getElementById('rules').innerHTML = '<div class="empty-state">当前预设还没有规则。你可以点击右侧“新建预设”或“+ 添加规则”开始配置。</div>';
+  }
+  updCount();
+  syncCurrentRulesToActivePreset();
+  queueSessionPersist();
+}
+
+function updDesc(id, value) {
+  var rule = findRule(id);
+  if (!rule) return;
+  rule.desc = value;
+  syncCurrentRulesToActivePreset();
+  queueSessionPersist();
+}
+
+function updTpl(id, value) {
+  var rule = findRule(id);
+  if (!rule) return;
+  rule.tpl = value;
   refreshPreview(id);
-  persistRuleDraft();
+  syncCurrentRulesToActivePreset();
+  queueSessionPersist();
+}
+
+function togSheet(id, input) {
+  var rule = findRule(id);
+  if (!rule) return;
+  var sheetName = input.dataset.sn;
+  if (input.checked) {
+    if (rule.sheets.indexOf(sheetName) < 0) rule.sheets.push(sheetName);
+  } else {
+    rule.sheets = rule.sheets.filter(function(item) { return item !== sheetName; });
+  }
+  refreshPreview(id);
+  syncCurrentRulesToActivePreset();
+  queueSessionPersist();
 }
 
 function refreshPreview(id) {
-  var r = rules.find(function(x) { return x.id === id; });
+  var rule = findRule(id);
+  if (!rule) return;
   var full = document.getElementById('pv-' + id);
   var short = document.getElementById('pvs-' + id);
-  if (!r) return;
-  var fn = r.sheets.length === 0 ? '（未选择工作表）' : resolveName(r) + '.xlsx';
-  var empty = r.sheets.length === 0;
-  if (full) { full.textContent = fn; full.style.color = empty ? '#ccc' : '#4a90d9'; }
-  if (short) { short.textContent = empty ? '' : fn; }
+  var filename = rule.sheets.length ? (resolveName(rule) + '.xlsx') : '（未选择工作表）';
+  if (full) {
+    full.textContent = filename;
+    full.style.color = rule.sheets.length ? '#4a90d9' : '#c2c7d0';
+  }
+  if (short) short.textContent = rule.sheets.length ? filename : '';
+}
+
+function findRule(id) {
+  return rules.find(function(rule) { return rule.id === id; });
 }
 
 function exportRulesData() {
-  return rules.map(function(r) {
-    return { sheets: r.sheets.slice(), tpl: r.tpl, desc: r.desc };
-  });
-}
-
-function normalizeRules(data) {
-  if (!Array.isArray(data)) return null;
-  return data.map(function(r) {
+  return rules.map(function(rule) {
     return {
-      sheets: Array.isArray(r && r.sheets) ? r.sheets.filter(function(s) { return typeof s === 'string' && s.trim(); }) : [],
-      tpl: r && typeof r.tpl === 'string' && r.tpl ? r.tpl : '{date}_{sheet}',
-      desc: r && typeof r.desc === 'string' ? r.desc : ''
+      sheets: rule.sheets.slice(),
+      tpl: rule.tpl,
+      desc: rule.desc
     };
   });
 }
 
-function importRulesText(text, fileName) {
+function normalizeRules(data) {
+  if (!Array.isArray(data)) return [];
+  return data.map(function(rule) {
+    return {
+      sheets: Array.isArray(rule && rule.sheets)
+        ? rule.sheets.filter(function(name) { return typeof name === 'string' && name.trim(); })
+        : [],
+      tpl: rule && typeof rule.tpl === 'string' && rule.tpl ? rule.tpl : '{date}_{sheet}',
+      desc: rule && typeof rule.desc === 'string' ? rule.desc : ''
+    };
+  });
+}
+
+function tryParseRules(text) {
+  if (!text) return null;
   try {
-    var normalized = tryParseRules(text);
-    if (!normalized) { showToast('JSON 格式错误', true); return; }
-    currentRuleDefaults = normalized;
-    currentRulesSource = fileName
-      ? ('已导入规则：' + fileName)
-      : '已导入规则 JSON';
-    updateSaveMode();
-    loadAndRenderRules(currentRuleDefaults, { skipPersist: true });
-    persistRuleDraft({ name: fileName || buildRulesJsonFilename() });
-    showToast(fileName ? ('规则已导入：' + fileName) : '规则已导入');
-  } catch (err) {
-    showToast('JSON 格式错误', true);
+    return normalizeRules(JSON.parse(text));
+  } catch (error) {
+    return null;
   }
 }
 
-function buildRulesJsonFilename() {
-  var stem = (currentWorkbookName || 'SanchoSheetset').split('/').pop().replace(/\.[^.]+$/, '') || 'SanchoSheetset';
-  return sanitize(stem) + RULES_JSON_SUFFIX;
+function normalizePresetList(data) {
+  if (!Array.isArray(data)) return [];
+  return data.map(function(item) {
+    var presetRules = normalizeRules(item && item.rules);
+    if ((!presetRules || !presetRules.length) && item && typeof item.rulesText === 'string') {
+      presetRules = tryParseRules(item.rulesText) || [];
+    }
+    return buildPreset({
+      id: item && item.id,
+      name: item && item.name,
+      rules: presetRules,
+      createdAt: item && item.createdAt,
+      updatedAt: item && item.updatedAt
+    });
+  }).filter(function(item) {
+    return !!item;
+  });
 }
-/* __EXPORT__ */
 
-// ========== 导出 ==========
+function buildPreset(data) {
+  var now = new Date().toISOString();
+  var presetRules = normalizeRules(data && data.rules);
+  return {
+    id: data && data.id ? String(data.id) : createPresetId(),
+    name: cleanPresetName(data && data.name ? data.name : buildPresetName(extractRulesLabel(presetRules) || PRESET_FALLBACK_NAME)),
+    rules: presetRules,
+    createdAt: data && data.createdAt ? data.createdAt : now,
+    updatedAt: data && data.updatedAt ? data.updatedAt : now
+  };
+}
+
+function findPreset(id) {
+  return rulePresets.find(function(item) { return item.id === id; });
+}
+
+function getActivePreset() {
+  return findPreset(activeRulePresetId);
+}
+
+function isPresetBlank(preset) {
+  return !!preset && Array.isArray(preset.rules) && preset.rules.length === 0;
+}
+
+function syncCurrentRulesToActivePreset() {
+  var preset = ensureActivePreset(true, { skipPersist: true });
+  if (!preset) return null;
+  preset.rules = exportRulesData();
+  preset.updatedAt = new Date().toISOString();
+  if (!preset.name) preset.name = buildPresetName(extractRulesLabel(preset.rules) || PRESET_FALLBACK_NAME);
+  compactRulePresets();
+  renderPresetList();
+  updatePresetMeta();
+  updateActionMeta();
+  return preset;
+}
+
+function compactRulePresets() {
+  var seen = {};
+  rulePresets = rulePresets.filter(function(item) {
+    if (!item || !item.id || seen[item.id]) return false;
+    seen[item.id] = true;
+    return true;
+  }).sort(function(a, b) {
+    return String(b.updatedAt || '').localeCompare(String(a.updatedAt || ''));
+  });
+  if (rulePresets.length > MAX_RULE_PRESETS) {
+    var keep = rulePresets.slice(0, MAX_RULE_PRESETS);
+    if (activeRulePresetId && !keep.some(function(item) { return item.id === activeRulePresetId; })) {
+      var active = findPreset(activeRulePresetId);
+      if (active) keep[keep.length - 1] = active;
+    }
+    rulePresets = keep;
+  }
+}
+
+function exportPresetData() {
+  compactRulePresets();
+  return rulePresets.map(function(item) {
+    return {
+      id: item.id,
+      name: item.name,
+      rules: normalizeRules(item.rules),
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt
+    };
+  });
+}
+
+function queueSessionPersist() {
+  if (!IS_DESKTOP_APP || !window.sanchoDesktop || !window.sanchoDesktop.setSession) return;
+  clearTimeout(ruleDraftTimer);
+  ruleDraftTimer = setTimeout(function() {
+    var active = getActivePreset() || syncCurrentRulesToActivePreset();
+    var serializedRules = JSON.stringify(active ? active.rules : exportRulesData(), null, 2);
+    window.sanchoDesktop.setSession({
+      activeRulePresetId: activeRulePresetId,
+      rulePresets: exportPresetData(),
+      lastRulesText: serializedRules,
+      lastRulesName: buildRulesJsonFilename()
+    }).catch(function() {});
+  }, 120);
+}
+
+function renderPresetList() {
+  var el = document.getElementById('presetList');
+  if (!rulePresets.length) {
+    el.innerHTML = '<div class="empty-state">还没有规则预设。新建一个后，后续会自动保存并出现在这里。</div>';
+    return;
+  }
+  el.innerHTML = rulePresets.map(function(item) {
+    var active = item.id === activeRulePresetId ? ' active' : '';
+    return '<button class="preset-item' + active + '" type="button" data-preset-id="' + item.id + '">'
+      + '<span class="preset-item-name">' + h(item.name) + '</span>'
+      + '<span class="preset-item-meta">' + h((item.rules.length || 0) + ' 条规则 · ' + formatPresetTime(item.updatedAt)) + '</span>'
+      + '</button>';
+  }).join('');
+}
+
+function updateFileMeta() {
+  var fileText = currentWorkbookName || '未选择';
+  var sheetText = sheetNames.length ? (sheetNames.length + ' 个工作表') : '未载入';
+  document.getElementById('fileMeta').innerHTML =
+    '<div><strong>当前文件：</strong>' + h(fileText) + '</div>'
+    + '<div><strong>工作表：</strong>' + h(sheetText) + '</div>';
+}
+
+function updatePresetMeta() {
+  var preset = getActivePreset();
+  if (preset) document.getElementById('presetNameInput').value = preset.name;
+  document.getElementById('presetMeta').innerHTML =
+    '<div><strong>当前预设：</strong>' + h(preset ? preset.name : '未选择') + '</div>'
+    + '<div><strong>自动保存：</strong>规则变更后自动记录，下次启动自动恢复</div>'
+    + '<div><strong>最近更新：</strong>' + h(preset ? formatPresetTime(preset.updatedAt) : '—') + '</div>';
+}
+
+function updateActionMeta() {
+  var exportText = currentExportDir && currentExportDir.path ? currentExportDir.path : '未设置';
+  document.getElementById('actionMeta').innerHTML =
+    '<div><strong>规则来源：</strong>' + h(currentRulesSource) + '</div>'
+    + '<div><strong>导出文件夹：</strong>' + h(exportText) + '</div>';
+}
+
+function updCount() {
+  document.getElementById('ruleCount').textContent = rules.length + ' 条';
+}
+
 async function pickExportDirectory(forcePrompt) {
   if (!IS_DESKTOP_APP || !window.sanchoDesktop || !window.sanchoDesktop.pickExportDirectory) {
     return null;
@@ -545,60 +803,74 @@ async function pickExportDirectory(forcePrompt) {
       return forcePrompt ? null : currentExportDir;
     }
     currentExportDir = result;
-    updateSaveMode();
+    updateActionMeta();
     showToast('导出文件夹已设置为 ' + result.name);
     return currentExportDir;
-  } catch (err) {
+  } catch (error) {
     if (forcePrompt) showToast('选择导出文件夹失败', true);
     return currentExportDir;
   }
 }
 
 async function exportAll() {
-  if (!srcWorkbook) { showToast('请先上传文件', true); return; }
-  var btn = document.getElementById('exportBtn');
-  btn.disabled = true; btn.textContent = '导出中...';
-  var logEl = document.getElementById('log');
-  logEl.innerHTML = '';
-  var ok = 0, fail = 0;
+  if (!srcWorkbook) {
+    showToast('请先选择 Excel 文件', true);
+    return;
+  }
   var exportDir = null;
-
   if (IS_DESKTOP_APP && window.sanchoDesktop && window.sanchoDesktop.pickExportDirectory) {
     exportDir = await pickExportDirectory(false);
     if (!exportDir || !exportDir.path) {
-      btn.disabled = false; btn.textContent = '导出全部';
       showToast('请先设置导出文件夹', true);
       return;
     }
   }
 
-  for (var idx = 0; idx < rules.length; idx++) {
-    var r = rules[idx];
-    if (r.sheets.length === 0) { logItem(logEl, 'err', (r.desc || '规则' + (idx+1)) + '：未选工作表'); fail++; continue; }
-    var miss = r.sheets.filter(function(s) { return sheetNames.indexOf(s) < 0; });
-    if (miss.length) { logItem(logEl, 'err', (r.desc || '规则' + (idx+1)) + '：缺少 ' + miss.join(',')); fail++; continue; }
+  var btn = document.getElementById('exportBtn');
+  var logEl = document.getElementById('log');
+  btn.disabled = true;
+  btn.textContent = '导出中...';
+  logEl.innerHTML = '';
+
+  var ok = 0;
+  var fail = 0;
+  for (var i = 0; i < rules.length; i++) {
+    var rule = rules[i];
+    if (!rule.sheets.length) {
+      logItem(logEl, 'err', (rule.desc || ('规则' + (i + 1))) + '：未选工作表');
+      fail++;
+      continue;
+    }
+    var missing = rule.sheets.filter(function(name) { return sheetNames.indexOf(name) < 0; });
+    if (missing.length) {
+      logItem(logEl, 'err', (rule.desc || ('规则' + (i + 1))) + '：缺少 ' + missing.join(','));
+      fail++;
+      continue;
+    }
     try {
-      var blob = await buildNewXlsx(r.sheets);
-      var fn = resolveName(r) + '.xlsx';
+      var blob = await buildNewXlsx(rule.sheets);
+      var filename = resolveName(rule) + '.xlsx';
       if (exportDir && exportDir.path && window.sanchoDesktop && window.sanchoDesktop.writeExportFile) {
         await window.sanchoDesktop.writeExportFile({
           dirPath: exportDir.path,
-          filename: fn,
+          filename: filename,
           data: await blob.arrayBuffer()
         });
       } else {
-        downloadBlob(blob, fn);
+        downloadBlob(blob, filename);
       }
-      logItem(logEl, 'ok', fn); ok++;
-    } catch (e) {
-      logItem(logEl, 'err', (r.desc || '规则' + (idx+1)) + '：' + e.message); fail++;
+      logItem(logEl, 'ok', filename);
+      ok++;
+    } catch (error) {
+      logItem(logEl, 'err', (rule.desc || ('规则' + (i + 1))) + '：' + error.message);
+      fail++;
     }
   }
-  btn.disabled = false; btn.textContent = '导出全部';
-  var parts = [];
-  if (ok) parts.push('成功 ' + ok);
-  if (fail) parts.push('失败 ' + fail);
-  if (parts.length) logEl.innerHTML += '<div class="log-done">' + parts.join('，') + '</div>';
+  btn.disabled = false;
+  btn.textContent = '导出全部';
+  if (ok || fail) {
+    logEl.innerHTML += '<div class="log-done">成功 ' + ok + '，失败 ' + fail + '</div>';
+  }
 }
 
 async function buildNewXlsx(keepSheets) {
@@ -618,11 +890,11 @@ async function buildNewXlsx(keepSheets) {
     });
 
     if (srcWs.columns) {
-      srcWs.columns.forEach(function(col, i) {
-        var nc = newWs.getColumn(i + 1);
-        if (col.width) nc.width = col.width;
-        if (col.style) nc.style = JSON.parse(JSON.stringify(col.style));
-        if (col.hidden) nc.hidden = col.hidden;
+      srcWs.columns.forEach(function(col, index) {
+        var nextCol = newWs.getColumn(index + 1);
+        if (col.width) nextCol.width = col.width;
+        if (col.style) nextCol.style = JSON.parse(JSON.stringify(col.style));
+        if (col.hidden) nextCol.hidden = col.hidden;
       });
     }
 
@@ -633,10 +905,11 @@ async function buildNewXlsx(keepSheets) {
       if (srcRow.outlineLevel) newRow.outlineLevel = srcRow.outlineLevel;
       srcRow.eachCell({ includeEmpty: true }, function(srcCell, colNum) {
         var newCell = newRow.getCell(colNum);
-        var t = srcCell.type;
-        if (t === ExcelJS.ValueType.Formula) {
-          var res = srcCell.result;
-          newCell.value = (res != null) ? res : (srcCell.value && srcCell.value.result != null ? srcCell.value.result : srcCell.text || '');
+        if (srcCell.type === ExcelJS.ValueType.Formula) {
+          var result = srcCell.result;
+          newCell.value = result != null
+            ? result
+            : (srcCell.value && srcCell.value.result != null ? srcCell.value.result : srcCell.text || '');
         } else {
           newCell.value = srcCell.value;
         }
@@ -647,7 +920,9 @@ async function buildNewXlsx(keepSheets) {
 
     if (srcWs._merges) {
       Object.keys(srcWs._merges).forEach(function(key) {
-        try { newWs.mergeCells(srcWs._merges[key]); } catch(e) {}
+        try {
+          newWs.mergeCells(srcWs._merges[key]);
+        } catch (error) {}
       });
     }
   });
@@ -656,51 +931,129 @@ async function buildNewXlsx(keepSheets) {
   return new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 }
 
+function resolveName(rule) {
+  var text = rule.tpl;
+  text = text.replace(/\{date(?:\s*([+-]\d+))?\}/g, function(_, offsetText) {
+    return fmtDate(offsetText ? parseInt(offsetText, 10) : 0);
+  });
+  text = text.replace(/\{sheet\}/g, rule.sheets[0] || '未命名');
+  text = text.replace(/\{A1:(.+?)\}/g, function(_, sheetName) {
+    var ws = srcWorkbook && srcWorkbook.getWorksheet(sheetName);
+    if (!ws) return sheetName;
+    var cell = ws.getCell('A1');
+    if (!cell) return sheetName;
+    var value = cell.type === ExcelJS.ValueType.Formula ? cell.result : cell.value;
+    if (value == null) return sheetName;
+    var normalized = String(value).trim();
+    return normalized || sheetName;
+  });
+  return sanitize(text);
+}
+
 function downloadBlob(blob, filename) {
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = filename;
   document.body.appendChild(a);
   a.click();
-  setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 100);
+  setTimeout(function() {
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  }, 100);
 }
 
-// ========== 文件名 ==========
-function resolveName(r) {
-  var s = r.tpl;
-  s = s.replace(/\{date\}/g, fmtDate());
-  s = s.replace(/\{sheet\}/g, r.sheets[0] || '未命名');
-  s = s.replace(/\{A1:(.+?)\}/g, function(_, sn) {
-    var ws = srcWorkbook && srcWorkbook.getWorksheet(sn);
-    if (ws) {
-      var cell = ws.getCell('A1');
-      if (cell) {
-        var v = cell.type === ExcelJS.ValueType.Formula ? cell.result : cell.value;
-        if (v != null) { var str = String(v).trim(); if (str) return str; }
-      }
+function buildRulesJsonFilename() {
+  var preset = getActivePreset();
+  var stem = preset ? preset.name : buildPresetName(PRESET_FALLBACK_NAME);
+  return sanitize(stem) + RULES_JSON_SUFFIX;
+}
+
+function createPresetId() {
+  return 'preset-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function buildPresetName(label) {
+  return fmtDate(0) + '_' + cleanPresetTitle(label || PRESET_FALLBACK_NAME);
+}
+
+function cleanPresetName(value) {
+  var next = String(value || '').trim().replace(/\.[^.]+$/, '');
+  if (!next) return buildPresetName(PRESET_FALLBACK_NAME);
+  return next.substring(0, 60);
+}
+
+function cleanPresetTitle(value) {
+  return String(value || PRESET_FALLBACK_NAME)
+    .trim()
+    .replace(/\.[^.]+$/, '')
+    .replace(/[\\/:*?"<>|]/g, '')
+    .replace(/\s+/g, '')
+    .substring(0, 24) || PRESET_FALLBACK_NAME;
+}
+
+function extractRulesLabel(list) {
+  if (!Array.isArray(list)) return '';
+  for (var i = 0; i < list.length; i++) {
+    if (list[i] && list[i].desc && String(list[i].desc).trim()) {
+      return String(list[i].desc).trim();
     }
-    return sn;
-  });
-  return sanitize(s);
+  }
+  return '';
+}
+
+function stemFromFilename(fileName) {
+  return String(fileName || '').split(/[\\/]/).pop().replace(/\.[^.]+$/, '');
+}
+
+function basename(filePath) {
+  return String(filePath || '').split(/[\\/]/).pop();
+}
+
+function formatPresetTime(value) {
+  if (!value) return '刚刚';
+  var date = new Date(value);
+  if (isNaN(date.getTime())) return '刚刚';
+  return String(date.getMonth() + 1).padStart(2, '0') + '-'
+    + String(date.getDate()).padStart(2, '0') + ' '
+    + String(date.getHours()).padStart(2, '0') + ':'
+    + String(date.getMinutes()).padStart(2, '0');
+}
+
+function fmtDate(offsetDays) {
+  var date = new Date();
+  if (offsetDays) date.setDate(date.getDate() + Number(offsetDays));
+  return String(date.getFullYear())
+    + String(date.getMonth() + 1).padStart(2, '0')
+    + String(date.getDate()).padStart(2, '0');
 }
 
 function logItem(el, cls, text) {
   el.innerHTML += '<div class="log-item log-' + cls + '">' + (cls === 'ok' ? '&#10003;' : '&#10007;') + ' ' + h(text) + '</div>';
 }
 
-function fmtDate() {
-  var d = new Date();
-  return '' + d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+function sanitize(value) {
+  return String(value || '')
+    .replace(/[\\/:*?"<>|]/g, '_')
+    .replace(/\.+$/, '')
+    .substring(0, 120) || '未命名';
 }
-function sanitize(s) { return s.replace(/[\\/:*?"<>|]/g, '_').replace(/\.+$/, '').substring(0,120) || '未命名'; }
-function h(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-function showToast(msg, isErr) {
-  var t = document.createElement('div');
-  t.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);padding:10px 24px;border-radius:8px;font-size:14px;font-weight:500;z-index:9999;box-shadow:0 2px 12px rgba(0,0,0,.12);transition:opacity .3s;'
+
+function h(value) {
+  var div = document.createElement('div');
+  div.textContent = value;
+  return div.innerHTML;
+}
+
+function showToast(message, isErr) {
+  var toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);padding:10px 24px;border-radius:8px;font-size:14px;font-weight:500;z-index:9999;box-shadow:0 2px 12px rgba(0,0,0,.12);transition:opacity .3s;'
     + (isErr ? 'background:#fde8e8;color:#c62828' : 'background:#e8f5e9;color:#2e7d32');
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(function() { t.style.opacity = '0'; setTimeout(function() { t.remove(); }, 300); }, 2000);
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(function() {
+    toast.style.opacity = '0';
+    setTimeout(function() { toast.remove(); }, 300);
+  }, 2000);
 }
 </script>
 </body>
