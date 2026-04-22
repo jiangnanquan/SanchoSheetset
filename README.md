@@ -30,14 +30,13 @@ npm start
 ### GitHub 发布
 
 ```bash
-./build.sh release v1.0.0
+./build.sh release
 ```
 
 推送 tag 后，GitHub Actions 会产出：
 
 - Windows x64 安装包
 - macOS Apple Silicon `.dmg`
-- macOS Intel `.dmg`
 
 ## 技术栈
 

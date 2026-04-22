@@ -23,10 +23,6 @@ jobs:
             build_script: npm run dist:mac -- --arm64
             artifact_glob: release/*.dmg
             artifact_name: sancho-sheetset-macos-arm64
-          - os: macos-13
-            build_script: npm run dist:mac -- --x64
-            artifact_glob: release/*.dmg
-            artifact_name: sancho-sheetset-macos-x64
 
     runs-on: ${{ matrix.os }}
 

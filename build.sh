@@ -22,6 +22,10 @@ if (match) process.stdout.write(match[1]);
 '
 }
 
+package_version_from_package() {
+  node -e 'process.stdout.write("v" + require("./package.json").version)'
+}
+
 usage() {
   echo "用法:"
   echo "  ./build.sh local           本地编译当前平台"
@@ -71,7 +75,7 @@ build_local() {
 
 # ========== 远程发布 ==========
 build_release() {
-  VERSION="${1:-v1.0.0}"
+  VERSION="${1:-$(package_version_from_package)}"
   echo "=== 远程发布 $VERSION ==="
 
   if ! gh auth status &>/dev/null; then
